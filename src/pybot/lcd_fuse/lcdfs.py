@@ -36,11 +36,11 @@ class FileHandler(object):
     data = ''
     do_write = None
 
-    def __init__(self, device):
+    def __init__(self, term):
         """
-         :param lcd_i2c.ANSITerm device:
+         :param lcd_i2c.ANSITerm term:
         """
-        self.device = device
+        self.terminal = term
 
     @property
     def is_read_only(self):
@@ -85,14 +85,14 @@ class FHLevelParameter(FileHandler):
 class FHBrightness(FHLevelParameter):
     def do_write(self, data):
         level = self.normalize_level(data)
-        self.device.set_brightness(level)
+        self.terminal.device.set_brightness(level)
         return level
 
 
 class FHContrast(FHLevelParameter):
     def do_write(self, data):
         level = self.normalize_level(data)
-        self.device.set_contrast(level)
+        self.terminal.device.set_contrast(level)
         return level
 
 
@@ -101,14 +101,14 @@ class FHBackLight(FHLevelParameter):
 
     def do_write(self, data):
         level = self.normalize_level(data)
-        self.device.set_backlight(bool(level))
+        self.terminal.device.set_backlight(bool(level))
         return level
 
 
 class FHKeys(FileHandler):
     @property
     def size(self):
-        self.data = str(self.device.get_keypad_state())
+        self.data = str(self.terminal.device.get_keypad_state())
         return len(self.data)
 
 
@@ -121,14 +121,15 @@ class FHLeds(FileHandler):
 
 class FHDisplay(FileHandler):
     def do_write(self, data):
-        self.device.handle_sequence(data)
+        self.terminal.process_sequence(data)
         return len(data)
 
 
 class FHInfo(FileHandler):
-    def __init__(self, device):
-        super(FHInfo, self).__init__(device)
+    def __init__(self, term):
+        super(FHInfo, self).__init__(term)
 
+        device = term.device
         self.data = ''.join([
             "%-16s : %s\n" % (k, v)
             for k, v in [
