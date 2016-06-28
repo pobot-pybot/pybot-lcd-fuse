@@ -37,6 +37,9 @@ class FileHandler(object):
     do_write = None
 
     def __init__(self, device):
+        """
+         :param lcd_i2c.ANSITerm device:
+        """
         self.device = device
 
     @property
@@ -118,7 +121,7 @@ class FHLeds(FileHandler):
 
 class FHDisplay(FileHandler):
     def do_write(self, data):
-        self.device.display(data)
+        self.device.handle_sequence(data)
         return len(data)
 
 
@@ -338,7 +341,7 @@ def main(mount_point, lcd_type=3):
         logger.warn('not running on RasPi => using dummy device')
     else:
         device_class = lcd_i2c.LCD03 if lcd_type == 3 else lcd_i2c.LCD05
-        device = device_class(i2c_bus)
+        device = lcd_i2c.ANSITerm(device_class(i2c_bus))
 
     try:
         FUSE(LCDFileSystem(device), mount_point, nothreads=True, foreground=True, debug=False)
