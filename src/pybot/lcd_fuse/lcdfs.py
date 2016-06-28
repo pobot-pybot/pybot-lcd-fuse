@@ -144,20 +144,22 @@ class FHInfo(FileHandler):
 
 
 class LCDFileSystem(Operations):
-    def __init__(self, device):
+    def __init__(self, terminal):
         self._content = {
-            'backlight': FSEntryDescriptor(FHBackLight(device)),
-            'keys': FSEntryDescriptor(FHKeys(device)),
-            'display': FSEntryDescriptor(FHDisplay(device)),
-            'info': FSEntryDescriptor(FHInfo(device)),
+            'backlight': FSEntryDescriptor(FHBackLight(terminal)),
+            'keys': FSEntryDescriptor(FHKeys(terminal)),
+            'display': FSEntryDescriptor(FHDisplay(terminal)),
+            'info': FSEntryDescriptor(FHInfo(terminal)),
         }
 
+        device = terminal.device
         if hasattr(device, 'brightness'):
-            self._content['brightness'] = FSEntryDescriptor(FHBrightness(device))
+            self._content['brightness'] = FSEntryDescriptor(FHBrightness(terminal))
         if hasattr(device, 'contrast'):
-            self._content['contrast'] = FSEntryDescriptor(FHContrast(device))
-        if hasattr(device, 'set_leds'):
-            self._content['leds'] = FSEntryDescriptor(FHLeds(device))
+            self._content['contrast'] = FSEntryDescriptor(FHContrast(terminal))
+
+        if hasattr(terminal, 'set_leds'):
+            self._content['leds'] = FSEntryDescriptor(FHLeds(terminal))
 
         self._dir_entries = ['.', '..'] + self._content.keys()
         logger.setLevel(logging.DEBUG)
