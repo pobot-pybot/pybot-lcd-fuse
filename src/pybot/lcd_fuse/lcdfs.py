@@ -23,6 +23,7 @@ logging.basicConfig(
     format="[%(levelname).1s] %(name)-12s > %(message)s"
 )
 logger = logging.getLogger('lcdfs')
+logger.setLevel(logging.INFO)
 
 
 class FSEntryDescriptor(object):
@@ -59,7 +60,7 @@ class FileHandler(object):
         except ValueError:
             return 0
         else:
-            return len(data)
+            return len(str(data))
 
     def read(self):
         return self.data
@@ -118,10 +119,9 @@ class FHKeys(FileHandler):
 
 
 class FHLeds(FileHandler):
-    size = 1
-
     def do_write(self, data):
-        pass
+        self.terminal.device.leds = int(data)
+        return data
 
 
 class FHDisplay(FileHandler):
@@ -159,14 +159,17 @@ class LCDFileSystem(Operations):
             'info': FSEntryDescriptor(FHInfo(terminal)),
         }
 
-        device = terminal.device
-        if hasattr(device, 'brightness'):
-            self._content['brightness'] = FSEntryDescriptor(FHBrightness(terminal))
-        if hasattr(device, 'contrast'):
-            self._content['contrast'] = FSEntryDescriptor(FHContrast(terminal))
+        dev_class = terminal.device.__class__
+        logger.info('interfacing device of type %s', dev_class)
 
-        if hasattr(terminal, 'set_leds'):
-            self._content['leds'] = FSEntryDescriptor(FHLeds(terminal))
+        for attr, fname, handler_class in [
+            ('brightness', 'brightness', FHBrightness),
+            ('contrast', 'contrast', FHContrast),
+            ('set_leds', 'leds', FHLeds),
+        ]:
+            if hasattr(dev_class, attr):
+                logger.info('adding %s entry', fname)
+                self._content[fname] = FSEntryDescriptor(handler_class(terminal))
 
         self._dir_entries = ['.', '..'] + self._content.keys()
 
@@ -179,10 +182,12 @@ class LCDFileSystem(Operations):
             except KeyError:
                 pass
 
+        try_write('backlight', 1)
         try_write('brightness', 255)
         try_write('contrast', 255)
-        try_write('backlight', 1)
-        try_write('keys', 0)
+        try_write('leds', 0)
+
+        self._content['display'].handler.write('\x0c')
 
     def _get_descriptor(self, path):
         """
@@ -363,7 +368,14 @@ def main(mount_point, lcd_type=3):
         device = DummyDevice()
         logger.warn('not running on RasPi => using dummy device')
     else:
-        device_class = lcd_i2c.LCD03 if lcd_type == 3 else lcd_i2c.LCD05
+        try:
+            from pybot.youpi2.ctlpanel import ControlPanel
+        except ImportError:
+            device_class = lcd_i2c.LCD03 if lcd_type == 3 else lcd_i2c.LCD05
+        else:
+            device_class = ControlPanel
+
+        logger.info('using %s as device', device_class.__name__)
         device = lcd_i2c.ANSITerm(device_class(i2c_bus))
 
     try:
