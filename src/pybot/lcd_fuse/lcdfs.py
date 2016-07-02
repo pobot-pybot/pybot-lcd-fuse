@@ -7,6 +7,7 @@ import time
 import stat
 import logging
 from argparse import ArgumentTypeError
+from binascii import hexlify
 
 from fuse import FUSE, Operations, FuseOSError
 
@@ -255,7 +256,7 @@ class LCDFileSystem(Operations):
             return fd.handler.read()
 
     def write(self, path, data, offset, fh):
-        logger.debug('write(%s, %s, %d)', path, data.strip(), offset)
+        logger.debug('write(%s, %s, %d)', path, hexlify(data.strip()), offset)
 
         try:
             fd = self._get_descriptor(path)
