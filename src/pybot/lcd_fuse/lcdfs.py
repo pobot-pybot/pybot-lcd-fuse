@@ -12,6 +12,7 @@ from fuse import FUSE, Operations, FuseOSError
 
 from pybot.core import cli
 from pybot.lcd import lcd_i2c
+from pybot.lcd.ansi import ANSITerm
 
 __author__ = 'Eric Pascual'
 
@@ -39,7 +40,7 @@ class FileHandler(object):
 
     def __init__(self, term):
         """
-         :param lcd_i2c.ANSITerm term:
+         :param pybot.lcd.ansi.ANSITerm term:
         """
         self.terminal = term
 
@@ -175,17 +176,19 @@ class LCDFileSystem(Operations):
 
         self.reset()
 
+    DEFAULT_CONTENTS = [
+            ('backlight', 1),
+            ('brightness', 255),
+            ('contrast', 255),
+            ('leds', 0)
+        ]
+
     def reset(self):
-        def try_write(file_name, value):
+        for file_name, value in self.DEFAULT_CONTENTS:
             try:
                 self._content[file_name].handler.write(value)
             except KeyError:
                 pass
-
-        try_write('backlight', 1)
-        try_write('brightness', 255)
-        try_write('contrast', 255)
-        try_write('leds', 0)
 
         # clear the display
         self._content['display'].handler.write('\x0c')
@@ -377,7 +380,7 @@ def main(mount_point, lcd_type=3):
             device_class = ControlPanel
 
         logger.info('terminal device type : %s', device_class.__name__)
-        device = lcd_i2c.ANSITerm(device_class(i2c_bus))
+        device = ANSITerm(device_class(i2c_bus))
 
     try:
         FUSE(LCDFileSystem(device), mount_point, nothreads=True, foreground=True, debug=False)
