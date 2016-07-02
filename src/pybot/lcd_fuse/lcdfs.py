@@ -160,7 +160,6 @@ class LCDFileSystem(Operations):
         }
 
         dev_class = terminal.device.__class__
-        logger.info('interfacing device of type %s', dev_class)
 
         for attr, fname, handler_class in [
             ('brightness', 'brightness', FHBrightness),
@@ -187,6 +186,7 @@ class LCDFileSystem(Operations):
         try_write('contrast', 255)
         try_write('leds', 0)
 
+        # clear the display
         self._content['display'].handler.write('\x0c')
 
     def _get_descriptor(self, path):
@@ -375,7 +375,7 @@ def main(mount_point, lcd_type=3):
         else:
             device_class = ControlPanel
 
-        logger.info('using %s as device', device_class.__name__)
+        logger.info('terminal device type : %s', device_class.__name__)
         device = lcd_i2c.ANSITerm(device_class(i2c_bus))
 
     try:
