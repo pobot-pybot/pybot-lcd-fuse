@@ -23,6 +23,8 @@ The exposed file system is composed of the following files:
   - leds (RW) : bit pattern of the LEDs state, as an integer value
 
 Which files are created is automatically handled, based on the type of the used device.
+
+The mtime of the files is updated to reflect their real modification time.
 """
 
 import sys
@@ -54,6 +56,10 @@ logger.setLevel(logging.INFO)
 
 
 class FSEntryDescriptor(object):
+    """ Descriptor of the file system entries.
+
+    It bundles the file stats (atime and mtime) and the handler of the file content.
+    """
     def __init__(self, handler, mtime=_file_timestamp, atime=_file_timestamp):
         self.handler = handler
         self.mtime = mtime
@@ -61,12 +67,19 @@ class FSEntryDescriptor(object):
 
 
 class FileHandler(object):
+    """ File content handler base class.
+
+    The FH is responsible for handling the content of a file for read and/or write operations.
+
+    This base class does not implement the real data processing for read/write operations,
+    this being left to subclasses associated to each of the involved file types.
+    """
     data = ''
     do_write = None
 
     def __init__(self, term):
         """
-         :param pybot.lcd.ansi.ANSITerm term:
+         :param pybot.lcd.ansi.ANSITerm term: the terminal interface by th FS
         """
         self.terminal = term
 
@@ -79,6 +92,20 @@ class FileHandler(object):
         return len(self.data)
 
     def write(self, data):
+        """ Write operation wrapper.
+
+        It takes care of the shared part of the process, including keeping a cache of
+        the written data when the device does not provide an equivalent read feature.
+        The specific one is delegated to the :py:meth:`_do_write` method, implemented
+        by concrete classes
+
+        It must be noted that write always occur from the start of the file, which means
+        that its content is overwritten each time data are written into it.
+
+        :param Any data: the data to be written, either as a string or as a numerical (integer) value
+        :return: the length of the data contained in the virtual file
+        :rtype: int
+        """
         if self.is_read_only:
             raise FuseOSError(errno.EACCES)
 
@@ -89,15 +116,48 @@ class FileHandler(object):
         else:
             return len(str(data))
 
+    def _do_write(self, data):
+        """ Write operation real job.
+
+        The overridden method must implement the interaction which is supposed to
+        happen with the device.
+
+        :param Any data: the data to be written
+        :return: the data to be stored in the cache of the simulated file (they will be converted
+        to a string before storage)
+        """
+        raise NotImplementedError()
+
     def read(self):
+        """ File content read.
+
+        By default, returns the cache content.
+
+        :return: the data "read" from the file
+        :rtype: str
+        """
         return self.data
 
 
 class FHLevelParameter(FileHandler):
+    """ Specialized file handler for contents representing a level in the 0-255 range.
+
+    It adds a value normalization which clamps data provided in write operations into the
+    right range.
+    """
     min_level = 0
     max_level = 255
 
     def normalize_level(self, level):
+        """ Normalizes a level by clamping it in the correct range.
+
+        The value can be provided as a numerical one or as a string, in which case
+        it will be automatically converted to an integer.
+
+        :param level: the level to be normalized
+        :return: the normalize value as an integer in 0-255 range
+        :rtype: int
+        """
         if isinstance(level, basestring):
             s = level.strip()
             try:
@@ -116,6 +176,7 @@ class FHLevelParameter(FileHandler):
 
 
 class FHBrightness(FHLevelParameter):
+    """ File handler for the 'brightness' file """
     def do_write(self, data):
         level = self.normalize_level(data)
         self.terminal.device.set_brightness(level)
@@ -123,6 +184,7 @@ class FHBrightness(FHLevelParameter):
 
 
 class FHContrast(FHLevelParameter):
+    """ File handler for the 'contrast' file """
     def do_write(self, data):
         level = self.normalize_level(data)
         self.terminal.device.set_contrast(level)
@@ -130,6 +192,10 @@ class FHContrast(FHLevelParameter):
 
 
 class FHBackLight(FHLevelParameter):
+    """ File handler for the 'backlight' file.
+
+    Restricts the level to the (0, 1) choices.
+    """
     max_level = 1
 
     def do_write(self, data):
@@ -139,6 +205,12 @@ class FHBackLight(FHLevelParameter):
 
 
 class FHKeys(FileHandler):
+    """ File handler for the 'keys' file.
+
+    Since the data size is always queried by the OS when a read operation
+    is made, the size evaluation process gets the data from the device and
+    cache them, so that the inherited read process can work as is.
+    """
     @property
     def size(self):
         self.data = str(self.terminal.device.get_keypad_state())
@@ -146,6 +218,8 @@ class FHKeys(FileHandler):
 
 
 class FHLeds(FileHandler):
+    """ File handler for the 'leds' file.
+    """
     def do_write(self, data):
         data = int(data)
         self.terminal.device.leds = data
@@ -153,12 +227,29 @@ class FHLeds(FileHandler):
 
 
 class FHDisplay(FileHandler):
+    """ File handler for the 'display' file.
+    """
     def do_write(self, data):
         self.terminal.process_sequence(data)
         return len(data)
 
 
 class FHInfo(FileHandler):
+    """ File handler for the 'info' file.
+
+    Since it is immutable, the content of the file is evaluated when creating
+    the handler and stored in the cache.
+
+    The content is formatted the same way as the ̀ /proc/cpuinfo` file. Here is
+    an example for a panel device:
+
+        rows             : 4
+        cols             : 20
+        model            : ControlPanel
+        version          : 1
+        brightness       : True
+        contrast         : True
+    """
     def __init__(self, term):
         super(FHInfo, self).__init__(term)
 
@@ -178,8 +269,14 @@ class FHInfo(FileHandler):
 
 
 class LCDFileSystem(Operations):
-    def __init__(self, terminal):
-        logger.setLevel(logging.DEBUG)
+    """ The file system implementation
+    """
+    def __init__(self, terminal, logging_level=logging.INFO):
+        """
+        :param ANSITerm terminal: the ANSI terminal wrapping the device
+        :param int logging_level: the logging level, as defined in the logging standard module
+        """
+        logger.setLevel(logging_level)
 
         dev_class = terminal.device.__class__
 
@@ -211,6 +308,7 @@ class LCDFileSystem(Operations):
         ]
 
     def reset(self):
+        """ Resets the file system content and synchronizes the terminal state accordingly. """
         for file_name, value in self.DEFAULT_CONTENTS:
             try:
                 self._content[file_name].handler.write(value)
@@ -221,19 +319,23 @@ class LCDFileSystem(Operations):
         self._content['display'].handler.write('\x0c')
 
     def _get_descriptor(self, path):
-        """
-        :param path:
-        :return:
+        """ Returns the file descriptor corresponding to a file path.
+
+        :param str path: teh file path (relative to the file system)
+        :return: the corresponding descriptor
         :rtype: FSEntryDescriptor
+        :raise KeyError: if path does not exist
         """
         if path.startswith('/'):
             path = path[1:]
         return self._content[path]
 
     def readdir(self, path, fh):
+        """ ..see:: :py:class:`fuse.Operations` """
         return self._dir_entries
 
     def getattr(self, path, fh=None):
+        """ ..see:: :py:class:`fuse.Operations` """
         logger.debug('getattr(path=%s, fh=%s)', path, fh)
 
         fstat = {
@@ -266,11 +368,13 @@ class LCDFileSystem(Operations):
             raise FuseOSError(errno.ENOENT)
 
     def open(self, path, flags):
+        """ ..see:: :py:class:`fuse.Operations` """
         logger.debug('open(%s, %d)', path, flags)
 
         return 1024 + self._content.keys().index(path[1:])
 
     def read(self, path, *args):
+        """ ..see:: :py:class:`fuse.Operations` """
         logger.debug('read(%s)', path)
 
         try:
@@ -282,6 +386,7 @@ class LCDFileSystem(Operations):
             return fd.handler.read()
 
     def write(self, path, data, offset, fh):
+        """ ..see:: :py:class:`fuse.Operations` """
         logger.debug('write(%s, %s, %d)', path, hexlify(data.strip()), offset)
 
         try:
@@ -293,12 +398,9 @@ class LCDFileSystem(Operations):
             fd.atime = fd.mtime = time.time()
             return retval
 
-    def truncate(self, path, length, fh=None):
-        logger.debug('truncate(%s, %d)', path, length)
-        pass
-
 
 class DummyDevice(object):
+    """ A dummy device for tests on a dev station """
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.INFO)
@@ -392,7 +494,7 @@ class DummyDevice(object):
         return 0b000000001001   # keys '1' and '4'
 
 
-def main(mount_point, dev_type='panel'):
+def main(mount_point, dev_type='panel', logging_level=logging.INFO):
     device = None
     try:
         from pybot.raspi import i2c_bus
@@ -427,7 +529,11 @@ def main(mount_point, dev_type='panel'):
             exit('cannot determine device type')
 
     try:
-        FUSE(LCDFileSystem(device), mount_point, nothreads=True, foreground=True, debug=False)
+        FUSE(
+            LCDFileSystem(device, logging_level=logging_level),
+            mount_point,
+            nothreads=True, foreground=True, debug=False
+        )
     except RuntimeError as e:
         sys.exit(1)
 
@@ -440,6 +546,20 @@ if __name__ == '__main__':
             return s
 
         raise ArgumentTypeError('invalid LCD type')
+
+    VALID_LEVELS = {
+        'i': logging.INFO,
+        'e': logging.ERROR,
+        'w': logging.WARNING,
+        'd': logging.DEBUG
+    }
+
+    def logging_level(s):
+        s = str(s).lower()
+        try:
+            return VALID_LEVELS[s]
+        except KeyError:
+            raise ArgumentTypeError('invalid logging level')
 
     parser = cli.get_argument_parser()
     parser.add_argument(
@@ -455,6 +575,13 @@ if __name__ == '__main__':
         default=VALID_TYPES[0],
         help="type of LCD (%s)" % ('|'.join(VALID_TYPES))
     )
+    parser.add_argument(
+        '-L', '--logging-level',
+        dest='logging_level',
+        type=logging_level,
+        default='i',
+        help="logging level (default: i)"
+    )
 
     args = parser.parse_args()
-    main(args.mount_point, args.dev_type)
+    main(args.mount_point, args.dev_type, args.logging_level)
