@@ -430,4 +430,4 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    main(args.mount_point, args.lcd_type)
+    main(args.mount_point, args.dev_type)
