@@ -81,6 +81,8 @@ class FHLevelParameter(FileHandler):
                     raise
         elif not isinstance(level, (int, float)):
             raise ValueError()
+        else:
+            value = level
 
         return int(min(self.max_level, max(value, self.min_level)))
 
