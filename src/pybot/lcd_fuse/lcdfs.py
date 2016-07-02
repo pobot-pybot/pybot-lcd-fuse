@@ -1,5 +1,30 @@
 # -*- coding: utf-8 -*-
 
+""" Implementation of a virtual file system for interfacing an LCD based display.
+
+It supports the LCD03 and LCD05 from Devantech (including the optional keypad
+attached), and also the custom panel built for Youpi arm, based on a LCD05
+plus a 4 keys keypad and 4 LEDs.
+
+The file system implementation is based on Terence Honles' fusepy library
+(https://github.com/terencehonles/fusepy).
+
+The exposed file system is composed of the following files:
+- all types of device:
+  - backlight (RW) : on/off state of the backlight (0=off, other values = on)
+  - keys (R) : bit pattern of the pressed keys, as an integer value
+  - info (R) : technical information about the device (inspired from the content of /proc/cpuinfo)
+  - display (W) : used to send the content of the display, using ANSI sequences for text position,
+    screen partial or total clearing,...
+- LCD05 based devices:
+  - brightness (RW) : brightness level of the backlight (0-255)
+  - contrast (RW) : contrast level of the LCD (0-255)
+- custom panel with LEDs:
+  - leds (RW) : bit pattern of the LEDs state, as an integer value
+
+Which files are created is automatically handled, based on the type of the used device.
+"""
+
 import sys
 import os
 import errno
@@ -138,15 +163,16 @@ class FHInfo(FileHandler):
         super(FHInfo, self).__init__(term)
 
         device = term.device
+        dev_class = device.__class__
         self.data = ''.join([
             "%-16s : %s\n" % (k, v)
             for k, v in [
                 ('rows', device.height),
                 ('cols', device.width),
-                ('model', device.__class__.__name__),
+                ('model', dev_class.__name__),
                 ('version', device.get_version()),
-                ('brightness', hasattr(device, 'brightness')),
-                ('contrast', hasattr(device, 'contrast')),
+                ('brightness', hasattr(dev_class, 'brightness')),
+                ('contrast', hasattr(dev_class, 'contrast')),
             ]
         ])
 
@@ -155,14 +181,14 @@ class LCDFileSystem(Operations):
     def __init__(self, terminal):
         logger.setLevel(logging.DEBUG)
 
+        dev_class = terminal.device.__class__
+
         self._content = {
             'backlight': FSEntryDescriptor(FHBackLight(terminal)),
             'keys': FSEntryDescriptor(FHKeys(terminal)),
             'display': FSEntryDescriptor(FHDisplay(terminal)),
             'info': FSEntryDescriptor(FHInfo(terminal)),
         }
-
-        dev_class = terminal.device.__class__
 
         for attr, fname, handler_class in [
             ('brightness', 'brightness', FHBrightness),
