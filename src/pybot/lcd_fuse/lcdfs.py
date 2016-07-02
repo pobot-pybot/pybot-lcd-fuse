@@ -365,22 +365,39 @@ class DummyDevice(object):
         return 0b000000001001   # keys '1' and '4'
 
 
-def main(mount_point, lcd_type=3):
+def main(mount_point, dev_type='panel'):
+    device = None
     try:
         from pybot.raspi import i2c_bus
+
     except ImportError:
         device = DummyDevice()
         logger.warn('not running on RasPi => using dummy device')
-    else:
-        try:
-            from pybot.youpi2.ctlpanel import ControlPanel
-        except ImportError:
-            device_class = lcd_i2c.LCD03 if lcd_type == 3 else lcd_i2c.LCD05
-        else:
-            device_class = ControlPanel
 
-        logger.info('terminal device type : %s', device_class.__name__)
-        device = ANSITerm(device_class(i2c_bus))
+    else:
+        device_class = None
+        if dev_type == 'panel':
+            try:
+                from pybot.youpi2.ctlpanel import ControlPanel
+            except ImportError:
+                exit('unsupported device type')
+            else:
+                device_class = ControlPanel
+
+        else:
+            try:
+                device_class = {
+                    'lcd03': lcd_i2c.LCD03,
+                    'lcd05': lcd_i2c.LCD05
+                }[dev_type]
+            except KeyError:
+                exit('unsupported device type')
+
+        if device_class:
+            logger.info('terminal device type : %s', device_class.__name__)
+            device = ANSITerm(device_class(i2c_bus))
+        else:
+            exit('cannot determine device type')
 
     try:
         FUSE(LCDFileSystem(device), mount_point, nothreads=True, foreground=True, debug=False)
@@ -388,15 +405,14 @@ def main(mount_point, lcd_type=3):
         sys.exit(1)
 
 if __name__ == '__main__':
-    def lcd_type(s):
-        try:
-            result = int(s)
-        except ValueError:
-            raise ArgumentTypeError('invalid LCD type')
-        else:
-            if result not in (3, 5):
-                raise ArgumentTypeError('invalid LCD type')
-            return result
+    VALID_TYPES = ('lcd03', 'lcd05', 'panel')
+
+    def dev_type(s):
+        s = str(s).lower()
+        if s in VALID_TYPES:
+            return s
+
+        raise ArgumentTypeError('invalid LCD type')
 
     parser = cli.get_argument_parser()
     parser.add_argument(
@@ -406,11 +422,11 @@ if __name__ == '__main__':
         default='/sys/class/lcd'
     )
     parser.add_argument(
-        '-t', '--lcd-type',
-        dest='lcd_type',
-        type=lcd_type,
-        default=3,
-        help="type of LCD (3|5)"
+        '-t', '--device-type',
+        dest='dev_type',
+        type=dev_type,
+        default=VALID_TYPES[0],
+        help="type of LCD (%s)" % ('|'.join(VALID_TYPES))
     )
 
     args = parser.parse_args()
