@@ -580,7 +580,7 @@ if __name__ == '__main__':
         dest='logging_level',
         type=logging_level,
         default='i',
-        help="logging level (default: i)"
+        help="logging level (%s)" % ('|'.join(VALID_LEVELS.keys()))
     )
 
     args = parser.parse_args()
