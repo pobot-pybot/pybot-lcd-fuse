@@ -120,7 +120,8 @@ class FHKeys(FileHandler):
 
 class FHLeds(FileHandler):
     def do_write(self, data):
-        self.terminal.device.leds = int(data)
+        data = int(data)
+        self.terminal.device.leds = data
         return data
 
 
