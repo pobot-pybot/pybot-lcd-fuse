@@ -70,16 +70,19 @@ class FHLevelParameter(FileHandler):
     max_level = 255
 
     def normalize_level(self, level):
-        s = level.strip()
-        try:
-            value = int(s)
-        except ValueError:
+        if isinstance(level, basestring):
+            s = level.strip()
             try:
-                value = int(s, 16)
+                value = int(s)
             except ValueError:
-                raise
+                try:
+                    value = int(s, 16)
+                except ValueError:
+                    raise
+        elif not isinstance(level, (int, float)):
+            raise ValueError()
 
-        return min(self.max_level, max(value, self.min_level))
+        return int(min(self.max_level, max(value, self.min_level)))
 
 
 class FHBrightness(FHLevelParameter):
@@ -145,6 +148,8 @@ class FHInfo(FileHandler):
 
 class LCDFileSystem(Operations):
     def __init__(self, terminal):
+        logger.setLevel(logging.DEBUG)
+
         self._content = {
             'backlight': FSEntryDescriptor(FHBackLight(terminal)),
             'keys': FSEntryDescriptor(FHKeys(terminal)),
@@ -162,7 +167,20 @@ class LCDFileSystem(Operations):
             self._content['leds'] = FSEntryDescriptor(FHLeds(terminal))
 
         self._dir_entries = ['.', '..'] + self._content.keys()
-        logger.setLevel(logging.DEBUG)
+
+        self.reset()
+
+    def reset(self):
+        def try_write(file_name, value):
+            try:
+                self._content[file_name].handler.write(value)
+            except KeyError:
+                pass
+
+        try_write('brightness', 255)
+        try_write('contrast', 255)
+        try_write('backlight', 1)
+        try_write('keys', 0)
 
     def _get_descriptor(self, path):
         """
