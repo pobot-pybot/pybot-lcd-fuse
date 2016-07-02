@@ -529,11 +529,13 @@ def main(mount_point, dev_type='panel', logging_level=logging.INFO):
             exit('cannot determine device type')
 
     try:
+        logger.info('starting FUSE daemon')
         FUSE(
             LCDFileSystem(device, logging_level=logging_level),
             mount_point,
             nothreads=True, foreground=True, debug=False
         )
+        logger.info('FUSE daemon stopped')
     except RuntimeError as e:
         sys.exit(1)
 
