@@ -547,20 +547,6 @@ if __name__ == '__main__':
 
         raise ArgumentTypeError('invalid LCD type')
 
-    VALID_LEVELS = {
-        'i': logging.INFO,
-        'e': logging.ERROR,
-        'w': logging.WARNING,
-        'd': logging.DEBUG
-    }
-
-    def logging_level(s):
-        s = str(s).lower()
-        try:
-            return VALID_LEVELS[s]
-        except KeyError:
-            raise ArgumentTypeError('invalid logging level')
-
     parser = cli.get_argument_parser()
     parser.add_argument(
         'mount_point',
@@ -575,13 +561,5 @@ if __name__ == '__main__':
         default=VALID_TYPES[0],
         help="type of LCD (%s)" % ('|'.join(VALID_TYPES))
     )
-    parser.add_argument(
-        '-L', '--logging-level',
-        dest='logging_level',
-        type=logging_level,
-        default='i',
-        help="logging level (%s)" % ('|'.join(VALID_LEVELS.keys()))
-    )
-
     args = parser.parse_args()
-    main(args.mount_point, args.dev_type, args.logging_level)
+    main(args.mount_point, args.dev_type, logging_level=logging.DEBUG if args.verbose else logging.INFO)
