@@ -372,13 +372,13 @@ class LCDFileSystem(Operations):
 
     def open(self, path, flags):
         """ ..see:: :py:class:`fuse.Operations` """
-        logger.debug('open(%s, 0x%x)', path, flags)
+        logger.debug('open(path=%s, flags=0x%x)', path, flags)
 
         return 1024 + self._content.keys().index(path[1:])
 
     def read(self, path, *args):
         """ ..see:: :py:class:`fuse.Operations` """
-        logger.debug('read(%s)', path)
+        logger.debug('read(path=%s)', path)
 
         try:
             fd = self._get_descriptor(path)
@@ -390,7 +390,7 @@ class LCDFileSystem(Operations):
 
     def write(self, path, data, offset, fh):
         """ ..see:: :py:class:`fuse.Operations` """
-        logger.debug('write(%s, %s, %d)', path, hexlify(data.strip()), offset)
+        logger.debug('write(path=%s, date=%s, offset=%d)', path, hexlify(data.strip()), offset)
 
         try:
             fd = self._get_descriptor(path)
@@ -406,4 +406,4 @@ class LCDFileSystem(Operations):
         ..important:: needs to be overridden otherwise default implementation generates
         a "read-only file system" error.
         """
-        logger.debug('truncate(%s, %d, %s)', path, length, fh)
+        logger.debug('truncate(path=%s, length=%d)', path, length)
