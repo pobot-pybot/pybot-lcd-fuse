@@ -22,7 +22,7 @@ logger = logging.getLogger('lcdfs')
 daemon_logger = logger.getChild('daemon')
 
 
-def run_daemon(mount_point, dev_type='panel', logging_level=logging.INFO):
+def run_daemon(mount_point, dev_type='panel'):
     device = None
     try:
         from pybot.raspi import i2c_bus
@@ -69,7 +69,7 @@ def run_daemon(mount_point, dev_type='panel', logging_level=logging.INFO):
             mount_point,
             nothreads=True, foreground=True, debug=False
         )
-        daemon_logger('FUSE daemon stopped')
+        daemon_logger.info('FUSE daemon stopped')
     except RuntimeError as e:
         sys.exit(1)
 
@@ -119,7 +119,9 @@ def main():
         help="type of LCD (%s)" % ('|'.join(VALID_TYPES))
     )
     args = parser.parse_args()
-    run_daemon(args.mount_point, args.dev_type, logging_level=logging.DEBUG if args.verbose else logging.INFO)
+
+    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    run_daemon(args.mount_point, args.dev_type)
 
 
 if __name__ == '__main__':
