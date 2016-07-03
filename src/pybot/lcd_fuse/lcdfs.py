@@ -265,7 +265,7 @@ class LCDFileSystem(Operations):
         :param ANSITerm terminal: the ANSI terminal wrapping the device
         :param int logging_level: the logging level, as defined in the logging standard module
         """
-        self._logger = logger
+        self._logger = logger.getChild(self.__class__.__name__) if logger else None
 
         dev_class = terminal.device.__class__
 

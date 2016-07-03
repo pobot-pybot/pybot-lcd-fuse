@@ -6,6 +6,7 @@
 import sys
 import os
 import logging
+import logging.config
 from argparse import ArgumentTypeError
 
 from fuse import FUSE
@@ -15,14 +16,10 @@ from .lcdfs import LCDFileSystem
 
 __author__ = 'Eric Pascual'
 
-logging.basicConfig(
-    format="[%(levelname).1s] %(name)-12s > %(message)s"
-)
-logger = logging.getLogger('lcdfs')
-daemon_logger = logger.getChild('daemon')
-
 
 def run_daemon(mount_point, dev_type='panel'):
+    daemon_logger = logging.getLogger('daemon')
+
     device = None
     try:
         from pybot.raspi import i2c_bus
@@ -65,7 +62,7 @@ def run_daemon(mount_point, dev_type='panel'):
         mount_point = os.path.abspath(mount_point)
         daemon_logger.info('starting FUSE daemon (mount point: %s)', mount_point)
         FUSE(
-            LCDFileSystem(device, logger=logger),
+            LCDFileSystem(device, logger=logging.getLogger()),
             mount_point,
             nothreads=True, foreground=True, debug=False
         )
@@ -79,6 +76,54 @@ def main():
 
     ..see:: setuptools documentation
     """
+    log_dir = "/var/log" if os.geteuid() == 0 else os.path.expanduser('~')
+
+    logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': True,
+        'formatters': {
+            'verbose': {
+                'format': '[%(levelname).1s] %(name)s > %(message)s'
+            },
+            'simple': {
+                'format': '%(levelname)s %(message)s'
+            },
+        },
+        'handlers': {
+            'console': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+                'formatter': 'verbose',
+            },
+            'file': {
+                'level': 'INFO',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'formatter': 'verbose',
+                'filename': os.path.join(log_dir, 'lcdfs.log'),
+                'maxBytes': 100 * 1024,
+                'backupCount': 3,
+            },
+            'null': {
+                'class': 'logging.NullHandler'
+            }
+        },
+        'root': {
+            'level': logging.INFO,
+            'handlers': ['console', 'file']
+        },
+        'loggers': {
+            'daemon': {
+                'handlers': ['null'],
+            },
+            'LCDFileSystem': {
+                'handlers': ['null'],
+            }
+        }
+    })
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
     try:
         import pkg_resources
     except ImportError:
