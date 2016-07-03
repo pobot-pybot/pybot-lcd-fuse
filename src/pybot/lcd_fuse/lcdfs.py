@@ -32,7 +32,6 @@ import logging
 import os
 import stat
 import time
-from binascii import hexlify
 
 from fuse import Operations, FuseOSError
 
@@ -43,12 +42,6 @@ __author__ = 'Eric Pascual'
 _file_timestamp = int(time.time())
 _gid = os.getgid()
 _uid = os.getuid()
-
-logging.basicConfig(
-    format="[%(levelname).1s] %(name)-12s > %(message)s"
-)
-logger = logging.getLogger('lcdfs')
-logger.setLevel(logging.INFO)
 
 
 class FSEntryDescriptor(object):
@@ -267,12 +260,12 @@ class FHInfo(FileHandler):
 class LCDFileSystem(Operations):
     """ The file system implementation
     """
-    def __init__(self, terminal, logging_level=logging.INFO):
+    def __init__(self, terminal, logger=None):
         """
         :param ANSITerm terminal: the ANSI terminal wrapping the device
         :param int logging_level: the logging level, as defined in the logging standard module
         """
-        logger.setLevel(logging_level)
+        self._logger = logger
 
         dev_class = terminal.device.__class__
 
@@ -284,7 +277,7 @@ class LCDFileSystem(Operations):
         }
 
         def report_entry_creation(name, read_only):
-            logger.info('entry created : %s (%s)', name, 'R' if read_only else 'RW')
+            self.log_info('entry created : %s (%s)', name, 'R' if read_only else 'RW')
 
         for n, d in self._content.iteritems():
             report_entry_creation(n, d.handler.is_read_only)
@@ -302,6 +295,22 @@ class LCDFileSystem(Operations):
         self._dir_entries = ['.', '..'] + self._content.keys()
 
         self.reset()
+
+    def log_info(self, *args):
+        if self._logger and self._logger.isEnabledFor(logging.INFO):
+            self._logger.info(*args)
+
+    def log_warning(self, *args):
+        if self._logger and self._logger.isEnabledFor(logging.WARNING):
+            self._logger.warning(*args)
+
+    def log_error(self, *args):
+        if self._logger and self._logger.isEnabledFor(logging.ERROR):
+            self._logger.error(*args)
+
+    def log_debug(self, *args):
+        if self._logger and self._logger.isEnabledFor(logging.DEBUG):
+            self._logger.debug(*args)
 
     DEFAULT_CONTENTS = [
             ('backlight', 1),
@@ -339,7 +348,7 @@ class LCDFileSystem(Operations):
 
     def getattr(self, path, fh=None):
         """ ..see:: :py:class:`fuse.Operations` """
-        logger.debug('getattr(path=%s, fh=%s)', path, fh)
+        self.log_debug('getattr(path=%s, fh=%s)', path, fh)
 
         fstat = {
             'st_uid': _uid,
@@ -372,13 +381,13 @@ class LCDFileSystem(Operations):
 
     def open(self, path, flags):
         """ ..see:: :py:class:`fuse.Operations` """
-        logger.debug('open(path=%s, flags=0x%x)', path, flags)
+        self.log_debug('open(path=%s, flags=0x%x)', path, flags)
 
         return 1024 + self._content.keys().index(path[1:])
 
     def read(self, path, *args):
         """ ..see:: :py:class:`fuse.Operations` """
-        logger.debug('read(path=%s)', path)
+        self.log_debug('read(path=%s)', path)
 
         try:
             fd = self._get_descriptor(path)
@@ -390,9 +399,9 @@ class LCDFileSystem(Operations):
 
     def write(self, path, data, offset, fh):
         """ ..see:: :py:class:`fuse.Operations` """
-        if logger.isEnabledFor(logging.DEBUG):
+        if self._logger.isEnabledFor(logging.DEBUG):
             hexed = ':'.join('%02x' % ord(b) for b in data)
-            logger.debug('write(path=%s, data=[%s], offset=%d)', path, hexed, offset)
+            self.log_debug('write(path=%s, data=[%s], offset=%d)', path, hexed, offset)
 
         try:
             fd = self._get_descriptor(path)
@@ -408,4 +417,4 @@ class LCDFileSystem(Operations):
         ..important:: needs to be overridden otherwise default implementation generates
         a "read-only file system" error.
         """
-        logger.debug('truncate(path=%s, length=%d)', path, length)
+        self.log_debug('truncate(path=%s, length=%d)', path, length)

@@ -15,8 +15,11 @@ from .lcdfs import LCDFileSystem
 
 __author__ = 'Eric Pascual'
 
-logger = logging.getLogger('lcdfs.daemon')
-logger.setLevel(logging.INFO)
+logging.basicConfig(
+    format="[%(levelname).1s] %(name)-12s > %(message)s"
+)
+logger = logging.getLogger('lcdfs')
+daemon_logger = logger.getChild('daemon')
 
 
 def run_daemon(mount_point, dev_type='panel', logging_level=logging.INFO):
@@ -27,7 +30,7 @@ def run_daemon(mount_point, dev_type='panel', logging_level=logging.INFO):
     except ImportError:
         from dummy import DummyDevice
         device = DummyDevice()
-        logger.warn('not running on RasPi => using dummy device')
+        daemon_logger.warn('not running on RasPi => using dummy device')
 
     else:
         device_class = None
@@ -53,20 +56,20 @@ def run_daemon(mount_point, dev_type='panel', logging_level=logging.INFO):
         if device_class:
             from pybot.lcd.ansi import ANSITerm
 
-            logger.info('terminal device type : %s', device_class.__name__)
+            daemon_logger.info('terminal device type : %s', device_class.__name__)
             device = ANSITerm(device_class(i2c_bus))
         else:
             exit('cannot determine device type')
 
     try:
         mount_point = os.path.abspath(mount_point)
-        logger.info('starting FUSE daemon (mount point: %s)', mount_point)
+        daemon_logger.info('starting FUSE daemon (mount point: %s)', mount_point)
         FUSE(
-            LCDFileSystem(device, logging_level=logging_level),
+            LCDFileSystem(device, logger=logger),
             mount_point,
             nothreads=True, foreground=True, debug=False
         )
-        logger.info('FUSE daemon stopped')
+        daemon_logger('FUSE daemon stopped')
     except RuntimeError as e:
         sys.exit(1)
 
