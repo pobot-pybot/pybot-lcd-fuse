@@ -390,7 +390,9 @@ class LCDFileSystem(Operations):
 
     def write(self, path, data, offset, fh):
         """ ..see:: :py:class:`fuse.Operations` """
-        logger.debug('write(path=%s, date=%s, offset=%d)', path, hexlify(data.strip()), offset)
+        if logger.isEnabledFor(logging.DEBUG):
+            hexed = ':'.join('%2x' % ord(b) for b in data)
+            logger.debug('write(path=%s, data=[%s], offset=%d)', path, hexed, offset)
 
         try:
             fd = self._get_descriptor(path)
