@@ -406,4 +406,4 @@ class LCDFileSystem(Operations):
         ..important:: needs to be overridden otherwise default implementation generates
         a "read-only file system" error.
         """
-        logger.debug('truncate(%s, %s, %d)', path, length, fh)
+        logger.debug('truncate(%s, %d, %s)', path, length, fh)
