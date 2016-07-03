@@ -27,19 +27,15 @@ Which files are created is automatically handled, based on the type of the used 
 The mtime of the files is updated to reflect their real modification time.
 """
 
-import sys
-import os
 import errno
-import time
-import stat
 import logging
-from argparse import ArgumentTypeError
+import os
+import stat
+import time
 from binascii import hexlify
 
-from fuse import FUSE, Operations, FuseOSError
+from fuse import Operations, FuseOSError
 
-from pybot.core import cli
-from pybot.lcd import lcd_i2c
 from pybot.lcd.ansi import ANSITerm
 
 __author__ = 'Eric Pascual'
@@ -287,14 +283,21 @@ class LCDFileSystem(Operations):
             'info': FSEntryDescriptor(FHInfo(terminal)),
         }
 
+        def report_entry_creation(name, read_only):
+            logger.info('created : %s (%s)', name, 'R' if read_only else 'RW')
+
+        for n, d in self._content.iteritems():
+            report_entry_creation(n, d.handler.is_read_only)
+
         for attr, fname, handler_class in [
             ('brightness', 'brightness', FHBrightness),
             ('contrast', 'contrast', FHContrast),
             ('set_leds', 'leds', FHLeds),
         ]:
             if hasattr(dev_class, attr):
-                logger.info('adding %s entry', fname)
-                self._content[fname] = FSEntryDescriptor(handler_class(terminal))
+                handler = handler_class(terminal)
+                self._content[fname] = FSEntryDescriptor(handler)
+                report_entry_creation(fname, handler.is_read_only)
 
         self._dir_entries = ['.', '..'] + self._content.keys()
 
@@ -397,171 +400,3 @@ class LCDFileSystem(Operations):
             retval = fd.handler.write(data)
             fd.atime = fd.mtime = time.time()
             return retval
-
-
-class DummyDevice(object):
-    """ A dummy device for tests on a dev station """
-    def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(logging.INFO)
-
-        self.height = 4
-        self.width = 20
-        self._backlight_state = None
-        self._brightness_level = None
-        self._contrast_level = None
-
-    @property
-    def backlight(self):
-        return self._backlight_state
-
-    @backlight.setter
-    def backlight(self, on):
-        self.set_backlight(on)
-
-    @property
-    def contrast(self):
-        return self._contrast_level
-
-    @contrast.setter
-    def contrast(self, value):
-        self.set_contrast(value)
-
-    @property
-    def brightness(self):
-        return self._brightness_level
-
-    @brightness.setter
-    def brightness(self, value):
-        self.set_brightness(value)
-
-    def get_version(self):
-        """ Returns the firmware version. """
-        return 42
-
-    def clear(self):
-        self.logger.info('clear display')
-
-    def home(self):
-        self.logger.info('cursor home')
-
-    def goto_pos(self, pos):
-        self.logger.info('cursor moved to position %d', pos)
-
-    def goto_line_col(self, line, col):
-        self.logger.info('cursor moved to position line=%d, col=%d', line, col)
-
-    def write(self, s):
-        self.logger.info('write text : %s', s)
-
-    def backspace(self):
-        self.logger.info('backspace')
-
-    def htab(self):
-        self.logger.info('htab')
-
-    def move_down(self):
-        self.logger.info('move_down')
-
-    def move_up(self):
-        self.logger.info('move_up')
-
-    def cr(self):
-        self.logger.info('cr')
-
-    def clear_column(self):
-        self.logger.info('clear_column')
-
-    def tab_set(self, pos):
-        self.logger.info('tab set to pos=%d', pos)
-
-    def set_backlight(self, on):
-        self._backlight_state = bool(on)
-        self.logger.info('back light is %s' % ('on' if on else 'off'))
-
-    def set_brightness(self, level):
-        self._brightness_level = level
-        self.logger.info('back light brightness set to %d' % level)
-
-    def set_contrast(self, level):
-        self._contrast_level = level
-        self.logger.info('back light contrast set to %d' % level)
-
-    def display(self, data):
-        self.logger.info('sending display sequence : %s' % data)
-
-    def get_keypad_state(self):
-        return 0b000000001001   # keys '1' and '4'
-
-
-def main(mount_point, dev_type='panel', logging_level=logging.INFO):
-    device = None
-    try:
-        from pybot.raspi import i2c_bus
-
-    except ImportError:
-        device = DummyDevice()
-        logger.warn('not running on RasPi => using dummy device')
-
-    else:
-        device_class = None
-        if dev_type == 'panel':
-            try:
-                from pybot.youpi2.ctlpanel import ControlPanel
-            except ImportError:
-                exit('unsupported device type')
-            else:
-                device_class = ControlPanel
-
-        else:
-            try:
-                device_class = {
-                    'lcd03': lcd_i2c.LCD03,
-                    'lcd05': lcd_i2c.LCD05
-                }[dev_type]
-            except KeyError:
-                exit('unsupported device type')
-
-        if device_class:
-            logger.info('terminal device type : %s', device_class.__name__)
-            device = ANSITerm(device_class(i2c_bus))
-        else:
-            exit('cannot determine device type')
-
-    try:
-        logger.info('starting FUSE daemon')
-        FUSE(
-            LCDFileSystem(device, logging_level=logging_level),
-            mount_point,
-            nothreads=True, foreground=True, debug=False
-        )
-        logger.info('FUSE daemon stopped')
-    except RuntimeError as e:
-        sys.exit(1)
-
-if __name__ == '__main__':
-    VALID_TYPES = ('lcd03', 'lcd05', 'panel')
-
-    def dev_type(s):
-        s = str(s).lower()
-        if s in VALID_TYPES:
-            return s
-
-        raise ArgumentTypeError('invalid LCD type')
-
-    parser = cli.get_argument_parser()
-    parser.add_argument(
-        'mount_point',
-        nargs='?',
-        help='file system mount point',
-        default='/sys/class/lcd'
-    )
-    parser.add_argument(
-        '-t', '--device-type',
-        dest='dev_type',
-        type=dev_type,
-        default=VALID_TYPES[0],
-        help="type of LCD (%s)" % ('|'.join(VALID_TYPES))
-    )
-    args = parser.parse_args()
-    main(args.mount_point, args.dev_type, logging_level=logging.DEBUG if args.verbose else logging.INFO)
