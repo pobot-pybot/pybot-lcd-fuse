@@ -372,7 +372,7 @@ class LCDFileSystem(Operations):
 
     def open(self, path, flags):
         """ ..see:: :py:class:`fuse.Operations` """
-        logger.debug('open(%s, %d)', path, flags)
+        logger.debug('open(%s, 0x%x)', path, flags)
 
         return 1024 + self._content.keys().index(path[1:])
 
