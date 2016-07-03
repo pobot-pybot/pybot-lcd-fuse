@@ -284,7 +284,7 @@ class LCDFileSystem(Operations):
         }
 
         def report_entry_creation(name, read_only):
-            logger.info('created : %s (%s)', name, 'R' if read_only else 'RW')
+            logger.info('entry created : %s (%s)', name, 'R' if read_only else 'RW')
 
         for n, d in self._content.iteritems():
             report_entry_creation(n, d.handler.is_read_only)
