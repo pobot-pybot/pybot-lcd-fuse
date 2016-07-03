@@ -400,3 +400,10 @@ class LCDFileSystem(Operations):
             retval = fd.handler.write(data)
             fd.atime = fd.mtime = time.time()
             return retval
+
+    def truncate(self, path, length, fh=None):
+        """
+        ..important:: needs to be overridden otherwise default implementation generates
+        a "read-only file system" error.
+        """
+        logger.debug('truncate(%s, %d, %d)', path, length, fh)
