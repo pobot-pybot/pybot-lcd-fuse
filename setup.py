@@ -14,4 +14,9 @@ setup(
     install_requires=['pybot-lcd', 'fusepy'],
     download_url='https://github.com/Pobot/PyBot',
     description='LCD access through fuse',
+    entry_points={
+        'console_scripts': [
+            'lcdfs = pybot.lcd_fuse.daemon:main'
+        ]
+    }
 )
