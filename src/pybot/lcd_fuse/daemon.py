@@ -75,6 +75,15 @@ def main():
 
     ..see:: setuptools documentation
     """
+    try:
+        import pkg_resources
+    except ImportError:
+        pass
+    else:
+        PKG_NAME = 'pybot-lcd-fuse'
+        version = pkg_resources.require(PKG_NAME)[0].version
+        logger.info('%s version : %s', PKG_NAME, version)
+
     VALID_TYPES = ('lcd03', 'lcd05', 'panel')
 
     def dev_type(s):
