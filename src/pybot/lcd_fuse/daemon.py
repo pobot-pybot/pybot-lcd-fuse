@@ -59,7 +59,7 @@ def run_daemon(mount_point, dev_type='panel', logging_level=logging.INFO):
             exit('cannot determine device type')
 
     try:
-        logger.info('starting FUSE daemon (mount point: %s)', mount_point)
+        logger.info('starting FUSE daemon (mount point: %s)', os.path.abspath(mount_point))
         FUSE(
             LCDFileSystem(device, logging_level=logging_level),
             mount_point,
