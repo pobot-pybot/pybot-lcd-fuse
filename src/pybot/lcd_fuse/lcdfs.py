@@ -391,7 +391,7 @@ class LCDFileSystem(Operations):
     def write(self, path, data, offset, fh):
         """ ..see:: :py:class:`fuse.Operations` """
         if logger.isEnabledFor(logging.DEBUG):
-            hexed = ':'.join('%2x' % ord(b) for b in data)
+            hexed = ':'.join('%02x' % ord(b) for b in data)
             logger.debug('write(path=%s, data=[%s], offset=%d)', path, hexed, offset)
 
         try:
