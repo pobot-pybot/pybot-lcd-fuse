@@ -5,6 +5,7 @@ import sys
 import shutil
 import pkg_resources
 import subprocess
+import grp
 
 __author__ = 'Eric Pascual'
 
@@ -13,6 +14,7 @@ INIT_SCRIPT = 'lcdfs'
 DAEMON_SCRIPT = 'lcdfsd'
 MOUNT_POINT = '/mnt/lcdfs'
 BIN = '/home/pi/.local/bin/'
+GROUP_NAME = 'lcdfs'
 
 
 def install_init():
@@ -30,3 +32,10 @@ def install_init():
 
     if not os.path.exists(MOUNT_POINT):
         os.mkdir(MOUNT_POINT, 0o755)
+        try:
+            gid = grp.getgrnam(GROUP_NAME)
+        except KeyError:
+            subprocess.call('addgroup %s' % GROUP_NAME, shell=True)
+            gid = grp.getgrnam(GROUP_NAME)
+
+        os.chown(MOUNT_POINT, 0, gid)
