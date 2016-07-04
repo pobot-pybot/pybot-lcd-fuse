@@ -83,7 +83,7 @@ def main():
         'disable_existing_loggers': True,
         'formatters': {
             'verbose': {
-                'format': '[%(levelname).1s] %(name)s > %(message)s'
+                'format': '%(asctime)s [%(levelname).1s] %(name)s > %(message)s'
             },
             'simple': {
                 'format': '%(levelname)s %(message)s'
@@ -123,6 +123,7 @@ def main():
 
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
+    logger.info('-' * 10 + ' starting')
 
     try:
         import pkg_resources
@@ -154,7 +155,7 @@ def main():
         nargs='?',
         help='file system mount point',
         type=existing_dir,
-        default='/sys/class/lcd'
+        default='/mnt/lcdfs'
     )
     parser.add_argument(
         '-t', '--device-type',
@@ -168,6 +169,7 @@ def main():
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
     run_daemon(args.mount_point, args.dev_type)
 
+    logger.info('-' * 10 + ' terminated')
 
 if __name__ == '__main__':
     main()

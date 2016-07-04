@@ -16,7 +16,11 @@ setup(
     description='LCD access through fuse',
     entry_points={
         'console_scripts': [
-            'lcdfs = pybot.lcd_fuse.daemon:main'
+            'lcdfs = pybot.lcd_fuse.daemon:main',
+            'lcdfs-install = pybot.lcd_fuse.install:install_init'
         ]
+    },
+    package_data={
+        'pybot.lcd_fuse': ['pkg_data/*']
     }
 )
