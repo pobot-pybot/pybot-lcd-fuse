@@ -33,9 +33,9 @@ def install_init():
     if not os.path.exists(MOUNT_POINT):
         os.mkdir(MOUNT_POINT, 0o755)
         try:
-            gid = grp.getgrnam(GROUP_NAME)
+            group = grp.getgrnam(GROUP_NAME)
         except KeyError:
             subprocess.call('addgroup %s' % GROUP_NAME, shell=True)
-            gid = grp.getgrnam(GROUP_NAME)
+            group = grp.getgrnam(GROUP_NAME)
 
-        os.chown(MOUNT_POINT, 0, gid)
+        os.chown(MOUNT_POINT, 0, group.gr_gid)
