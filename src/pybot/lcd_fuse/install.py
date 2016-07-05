@@ -5,7 +5,6 @@ import sys
 import shutil
 import pkg_resources
 import subprocess
-import grp
 
 __author__ = 'Eric Pascual'
 
@@ -32,10 +31,3 @@ def install_init():
 
     if not os.path.exists(MOUNT_POINT):
         os.mkdir(MOUNT_POINT, 0o755)
-        try:
-            group = grp.getgrnam(GROUP_NAME)
-        except KeyError:
-            subprocess.call('addgroup %s' % GROUP_NAME, shell=True)
-            group = grp.getgrnam(GROUP_NAME)
-
-        os.chown(MOUNT_POINT, 0, group.gr_gid)
