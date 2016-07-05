@@ -64,7 +64,8 @@ def run_daemon(mount_point, dev_type='panel'):
         FUSE(
             LCDFileSystem(device, logger=logging.getLogger()),
             mount_point,
-            nothreads=True, foreground=True, debug=False
+            nothreads=True, foreground=True, debug=False,
+            allow_other=True
         )
         daemon_logger.info('FUSE daemon stopped')
     except RuntimeError as e:
@@ -91,12 +92,10 @@ def main():
         },
         'handlers': {
             'console': {
-                'level': 'DEBUG',
                 'class': 'logging.StreamHandler',
-                'formatter': 'verbose',
+                'formatter': 'simple',
             },
             'file': {
-                'level': 'INFO',
                 'class': 'logging.handlers.RotatingFileHandler',
                 'formatter': 'verbose',
                 'filename': os.path.join(log_dir, 'lcdfs.log'),
@@ -108,7 +107,6 @@ def main():
             }
         },
         'root': {
-            'level': logging.INFO,
             'handlers': ['console', 'file']
         },
         'loggers': {
