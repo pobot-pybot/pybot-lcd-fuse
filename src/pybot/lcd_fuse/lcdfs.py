@@ -32,6 +32,7 @@ import logging
 import os
 import stat
 import time
+import grp
 
 from fuse import Operations, FuseOSError
 
@@ -40,8 +41,8 @@ from pybot.lcd.ansi import ANSITerm
 __author__ = 'Eric Pascual'
 
 _file_timestamp = int(time.time())
-_gid = os.getgid()
 _uid = os.getuid()
+_gid = grp.getgrnam('lcdfs').gr_gid
 
 
 class FSEntryDescriptor(object):
@@ -378,6 +379,9 @@ class LCDFileSystem(Operations):
 
         except KeyError:
             raise FuseOSError(errno.ENOENT)
+
+    def chmod(self, path, mode):
+        self.log_debug('chmod(path=%s, mode=%s)', path, mode)
 
     def open(self, path, flags):
         """ ..see:: :py:class:`fuse.Operations` """
