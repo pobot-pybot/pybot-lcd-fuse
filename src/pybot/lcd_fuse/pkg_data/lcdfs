@@ -18,13 +18,11 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="FUSE file system for LCD interaction"
 NAME=lcdfs
 DAEMON=/home/pi/.local/bin/lcdfs
-DAEMON_ARGS="-t panel -v"
+DAEMON_ARGS="-t panel"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
-
 VARRUN=/var/run
-VARLOG=/var/log
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 1
@@ -53,9 +51,7 @@ do_start() {
         echo -n " already started"
         RETVAL=1
     else
-        echo "" >> $LOGFILE
-        echo "-------- Starting service $NAME at $(date)" >> $LOGFILE
-        $DAEMON $DAEMON_ARGS >> $LOGFILE 2>&1 &
+        $DAEMON $DAEMON_ARGS &
         pid=$!
         RETVAL="$?"
     fi
@@ -83,8 +79,6 @@ do_stop() {
     # 2 if daemon could not be stopped
     # other if a failure occurred
     if [ -f $PIDFILE ] ; then
-        echo "" >> $LOGFILE
-        echo "-------- Stopping service $NAME at $(date)" >> $LOGFILE
         read pid < $PIDFILE
         kill $pid 2> /dev/null
         RETVAL="$?"
