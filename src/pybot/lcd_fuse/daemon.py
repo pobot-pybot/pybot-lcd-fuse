@@ -5,6 +5,7 @@
 
 import sys
 import os
+import glob
 import logging
 import logging.config
 from argparse import ArgumentTypeError
@@ -58,8 +59,12 @@ def run_daemon(mount_point, dev_type='panel'):
         else:
             exit('cannot determine device type')
 
+    def cleanup_mount_point(mp):
+        [os.remove(p) for p in glob.glob(os.path.join(mp, '*'))]
+
     try:
         mount_point = os.path.abspath(mount_point)
+        cleanup_mount_point(mount_point)
         daemon_logger.info('starting FUSE daemon (mount point: %s)', mount_point)
         FUSE(
             LCDFileSystem(device, logger=logging.getLogger()),
@@ -70,6 +75,8 @@ def run_daemon(mount_point, dev_type='panel'):
         daemon_logger.info('FUSE daemon stopped')
     except RuntimeError as e:
         sys.exit(1)
+    finally:
+        cleanup_mount_point(mount_point)
 
 
 def main():
