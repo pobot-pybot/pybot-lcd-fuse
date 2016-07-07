@@ -18,11 +18,12 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="FUSE file system for LCD interaction"
 NAME=lcdfs
 DAEMON=/home/pi/.local/bin/lcdfs
-DAEMON_ARGS="-t panel"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 VARRUN=/var/run
+
+MOUNT_POINT=/mnt/lcdfs
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 1
@@ -32,6 +33,8 @@ export PYTHONPATH=/home/pi/.local/lib/python2.7/site-packages/
 
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
+
+DAEMON_ARGS="$MOUNT_POINT -t panel"
 
 # Load the VERBOSE setting and other rcS variables
 . /lib/init/vars.sh
@@ -56,9 +59,11 @@ do_start() {
         RETVAL="$?"
     fi
 
-    # poor man's strategy for checking if the process didn't hang during startup
+    # waits for the file system to be ready
     sleep 1
-    kill -0 $pid 2> /dev/null && echo $pid > $PIDFILE || RETVAL=2
+
+    # check if it is
+    [ -f $MOUNT_POINT ] && RETVAL=0 || RETVAL=2
 
     case "$RETVAL" in
         0|1) log_end_msg 0 ;;
