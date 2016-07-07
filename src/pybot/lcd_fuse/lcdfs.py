@@ -207,6 +207,17 @@ class FHKeys(FileHandler):
         return len(self.data)
 
 
+class FHLocked(FileHandler):
+    """ File handler for the 'locked' file.
+
+    Works the same way as FHKeys.
+    """
+    @property
+    def size(self):
+        self.data = str(int(self.terminal.device.is_locked()))
+        return len(self.data)
+
+
 class FHLeds(FileHandler):
     """ File handler for the 'leds' file.
     """
@@ -239,6 +250,7 @@ class FHInfo(FileHandler):
         version          : 1
         brightness       : True
         contrast         : True
+        locked           : True
     """
     def __init__(self, term):
         super(FHInfo, self).__init__(term)
@@ -254,6 +266,7 @@ class FHInfo(FileHandler):
                 ('version', device.get_version()),
                 ('brightness', hasattr(dev_class, 'brightness')),
                 ('contrast', hasattr(dev_class, 'contrast')),
+                ('locked', hasattr(dev_class, 'is_locked')),
             ]
         ])
 
@@ -287,6 +300,7 @@ class LCDFileSystem(Operations):
             ('brightness', 'brightness', FHBrightness),
             ('contrast', 'contrast', FHContrast),
             ('set_leds', 'leds', FHLeds),
+            ('is_locked', 'locked', FHLocked),
         ]:
             if hasattr(dev_class, attr):
                 handler = handler_class(terminal)
@@ -314,11 +328,12 @@ class LCDFileSystem(Operations):
             self._logger.debug(*args)
 
     DEFAULT_CONTENTS = [
-            ('backlight', 1),
-            ('brightness', 255),
-            ('contrast', 255),
-            ('leds', 0)
-        ]
+        ('backlight', 1),
+        ('brightness', 255),
+        ('contrast', 255),
+        ('leds', 0),
+        ('locked', 0)
+    ]
 
     def reset(self):
         """ Resets the file system content and synchronizes the terminal state accordingly. """
