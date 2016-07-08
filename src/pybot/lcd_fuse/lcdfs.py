@@ -281,6 +281,7 @@ class LCDFileSystem(Operations):
         """
         self._logger = logger.getChild(self.__class__.__name__) if logger else None
 
+        self.terminal = terminal
         dev_class = terminal.device.__class__
 
         self._content = {
@@ -331,8 +332,7 @@ class LCDFileSystem(Operations):
         ('backlight', 1),
         ('brightness', 255),
         ('contrast', 255),
-        ('leds', 0),
-        ('locked', 0)
+        ('leds', 0)
     ]
 
     def reset(self):
@@ -342,6 +342,9 @@ class LCDFileSystem(Operations):
                 self._content[file_name].handler.write(value)
             except KeyError:
                 pass
+            except FuseOSError as e:
+                self.log_error("%s (file=%s)", e, file_name)
+                raise
 
         # clear the display
         self._content['display'].handler.write('\x0c')
@@ -357,6 +360,13 @@ class LCDFileSystem(Operations):
         if path.startswith('/'):
             path = path[1:]
         return self._content[path]
+
+    def destroy(self, path):
+        """ ..see:: :py:class:`fuse.Operations` """
+        self.log_debug('destroy(path=%s)', path)
+        self.log_info('destroying file system')
+        self.reset()
+        self.terminal.device.set_backlight(False)
 
     def readdir(self, path, fh):
         """ ..see:: :py:class:`fuse.Operations` """

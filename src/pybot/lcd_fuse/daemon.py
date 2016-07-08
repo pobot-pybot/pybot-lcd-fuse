@@ -69,7 +69,7 @@ def run_daemon(mount_point, dev_type='panel'):
         FUSE(
             LCDFileSystem(device, logger=logging.getLogger()),
             mount_point,
-            nothreads=True, foreground=True, debug=False,
+            nothreads=True, foreground=False, debug=False,
             allow_other=True
         )
         daemon_logger.info('FUSE daemon stopped')
