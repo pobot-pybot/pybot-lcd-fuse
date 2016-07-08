@@ -17,7 +17,8 @@ setup(
     entry_points={
         'console_scripts': [
             'lcdfs = pybot.lcd_fuse.daemon:main',
-            'lcdfs-install = pybot.lcd_fuse.install:install_init'
+            'lcdfs-initd = pybot.lcd_fuse.install:install_initd'
+            'lcdfs-systemd = pybot.lcd_fuse.install:install_systemd'
         ]
     },
     package_data={
