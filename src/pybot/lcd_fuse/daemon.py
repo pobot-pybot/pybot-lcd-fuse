@@ -34,9 +34,9 @@ def run_daemon(mount_point, dev_type='panel'):
         device_class = None
         if dev_type == 'panel':
             try:
-                from pybot.youpi2.ctlpanel import ControlPanel
+                from pybot.youpi2.ctlpanel.direct import ControlPanel
             except ImportError:
-                exit('unsupported device type')
+                exit('unsupported device type (%s)' % dev_type)
             else:
                 device_class = ControlPanel
 
@@ -49,7 +49,7 @@ def run_daemon(mount_point, dev_type='panel'):
                     'lcd05': lcd_i2c.LCD05
                 }[dev_type]
             except KeyError:
-                exit('unsupported device type')
+                exit('unsupported device type (%s)' % dev_type)
 
         if device_class:
             from pybot.lcd.ansi import ANSITerm
