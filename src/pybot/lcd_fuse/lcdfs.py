@@ -80,7 +80,7 @@ class FileHandler(object):
 
     @property
     def size(self):
-        return len(self.data)
+        return len(self.data) + 1   # add 1 for the trailing newline
 
     def write(self, data):
         """ Write operation wrapper.
@@ -129,7 +129,7 @@ class FileHandler(object):
         """
         if self.logger:
             self.logger.info("read -> %s", self.data)
-        return self.data
+        return self.data + '\n'
 
 
 class FHLevelParameter(FileHandler):
@@ -209,7 +209,7 @@ class FHKeys(FileHandler):
         self.data = str(self.terminal.device.get_keypad_state())
         if self.logger:
             self.logger.info("self.data=%s", self.data)
-        return len(self.data)
+        return len(self.data) + 1
 
 
 class FHLocked(FileHandler):
