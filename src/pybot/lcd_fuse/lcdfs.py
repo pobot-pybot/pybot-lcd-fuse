@@ -274,6 +274,10 @@ class FHInfo(FileHandler):
             ]
         ])
 
+    @property
+    def size(self):
+        return len(self.data)
+
 
 class LCDFileSystem(Operations):
     """ The file system implementation
