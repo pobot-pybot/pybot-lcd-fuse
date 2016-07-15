@@ -5,7 +5,7 @@ After=syslog.target
 [Service]
 Type=forking
 Environment=PYTHONPATH=/home/pi/.local/lib/python2.7/site-packages/ LCDFS_MOUNT_POINT=/mnt/lcdfs
-ExecStart=/home/pi/.local/bin/lcdfs -t pybot.youpi2.ctlpanel.fs.ControlPanel $LCDFS_MOUNT_POINT
+ExecStart=/home/pi/.local/bin/lcdfs -t pybot.youpi2.ctlpanel.direct.ControlPanel $LCDFS_MOUNT_POINT
 ExecStop=/bin/fusermount -u $LCDFS_MOUNT_POINT
 
 [Install]
