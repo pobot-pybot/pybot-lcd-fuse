@@ -425,7 +425,9 @@ class LCDFileSystem(Operations):
             raise FuseOSError(errno.ENOENT)
         else:
             fd.atime = time.time()
-            return fd.handler.read()
+            data = fd.handler.read()
+            self.log_info("read(%s) -> %s", path, data)
+            return data
 
     def write(self, path, data, offset, fh):
         """ ..see:: :py:class:`fuse.Operations` """
