@@ -257,8 +257,8 @@ class FHInfo(FileHandler):
         contrast         : True
         locked           : True
     """
-    def __init__(self, term):
-        super(FHInfo, self).__init__(term)
+    def __init__(self, term, **kwargs):
+        super(FHInfo, self).__init__(term, **kwargs)
 
         device = term.device
         dev_class = device.__class__
