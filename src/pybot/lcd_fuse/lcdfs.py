@@ -291,10 +291,10 @@ class LCDFileSystem(Operations):
         dev_class = terminal.device.__class__
 
         self._content = {
-            'backlight': FSEntryDescriptor(FHBackLight(terminal, self._logger)),
-            'keys': FSEntryDescriptor(FHKeys(terminal, self._logger)),
-            'display': FSEntryDescriptor(FHDisplay(terminal, self._logger)),
-            'info': FSEntryDescriptor(FHInfo(terminal, self._logger)),
+            'backlight': FSEntryDescriptor(FHBackLight(terminal, logger=self._logger)),
+            'keys': FSEntryDescriptor(FHKeys(terminal, logger=self._logger)),
+            'display': FSEntryDescriptor(FHDisplay(terminal, logger=self._logger)),
+            'info': FSEntryDescriptor(FHInfo(terminal, logger=self._logger)),
         }
 
         def report_entry_creation(name, read_only):
@@ -310,7 +310,7 @@ class LCDFileSystem(Operations):
             ('is_locked', 'locked', FHLocked),
         ]:
             if hasattr(dev_class, attr):
-                handler = handler_class(terminal, self._logger)
+                handler = handler_class(terminal, logger=self._logger)
                 self._content[fname] = FSEntryDescriptor(handler)
                 report_entry_creation(fname, handler.is_read_only)
 
