@@ -42,7 +42,7 @@ def run_daemon(mount_point, dev_type='panel'):
 
         elif '.' in dev_type:
             parts = dev_type.split('.')
-            module_name = parts[:-1]
+            module_name = '.'.join(parts[:-1])
             class_name = parts[-1]
             try:
                 import importlib
