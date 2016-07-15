@@ -280,6 +280,7 @@ class LCDFileSystem(Operations):
         :param int logging_level: the logging level, as defined in the logging standard module
         """
         self._logger = logger.getChild(self.__class__.__name__) if logger else None
+        self.log_info("initializing FUSE implementation")
 
         self.terminal = terminal
         dev_class = terminal.device.__class__
