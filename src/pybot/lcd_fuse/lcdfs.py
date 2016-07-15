@@ -67,11 +67,12 @@ class FileHandler(object):
     data = ''
     do_write = None
 
-    def __init__(self, term):
+    def __init__(self, term, logger=None):
         """
          :param pybot.lcd.ansi.ANSITerm term: the terminal interface by th FS
         """
         self.terminal = term
+        self.logger = logger.getChild(self.__class__.__name__) if logger else None
 
     @property
     def is_read_only(self):
@@ -126,6 +127,7 @@ class FileHandler(object):
         :return: the data "read" from the file
         :rtype: str
         """
+        self.logger.info("read -> %s", self.data)
         return self.data
 
 
