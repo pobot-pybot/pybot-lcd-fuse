@@ -151,7 +151,7 @@ def main():
 
     def dev_type(s):
         s = str(s).lower()
-        if s in BUILTIN_TYPES:
+        if s in BUILTIN_TYPES or '.' in s:
             return s
 
         raise ArgumentTypeError('invalid LCD type')
