@@ -278,6 +278,9 @@ class FHInfo(FileHandler):
     def size(self):
         return len(self.data)
 
+    def read(self):
+        return self.data
+
 
 class LCDFileSystem(Operations):
     """ The file system implementation
