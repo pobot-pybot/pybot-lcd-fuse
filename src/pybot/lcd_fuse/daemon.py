@@ -32,24 +32,32 @@ def run_daemon(mount_point, dev_type='panel'):
 
     else:
         device_class = None
-        if dev_type == 'panel':
+        if dev_type == 'lcd03':
+            from pybot.lcd.lcd_i2c import LCD03
+            device_class = LCD03
+
+        elif dev_type == 'lcd05':
+            from pybot.lcd.lcd_i2c import LCD05
+            device_class = LCD05
+
+        elif '.' in dev_type:
+            parts = dev_type.split('.')
+            module_name = parts[:-1]
+            class_name = parts[-1]
             try:
-                from pybot.youpi2.ctlpanel.direct import ControlPanel
+                import importlib
+                module = importlib.import_module(module_name)
+
             except ImportError:
                 exit('unsupported device type (%s)' % dev_type)
             else:
-                device_class = ControlPanel
+                try:
+                    device_class = module.getattr(class_name)
+                except AttributeError:
+                    exit('unsupported device type (%s)' % dev_type)
 
         else:
-            try:
-                from pybot.lcd import lcd_i2c
-
-                device_class = {
-                    'lcd03': lcd_i2c.LCD03,
-                    'lcd05': lcd_i2c.LCD05
-                }[dev_type]
-            except KeyError:
-                exit('unsupported device type (%s)' % dev_type)
+            exit('unsupported device type (%s)' % dev_type)
 
         if device_class:
             from pybot.lcd.ansi import ANSITerm
@@ -139,11 +147,11 @@ def main():
         version = pkg_resources.require(PKG_NAME)[0].version
         logger.info('%s version : %s', PKG_NAME, version)
 
-    VALID_TYPES = ('lcd03', 'lcd05', 'panel')
+    BUILTIN_TYPES = ('lcd03', 'lcd05')
 
     def dev_type(s):
         s = str(s).lower()
-        if s in VALID_TYPES:
+        if s in BUILTIN_TYPES:
             return s
 
         raise ArgumentTypeError('invalid LCD type')
@@ -166,8 +174,8 @@ def main():
         '-t', '--device-type',
         dest='dev_type',
         type=dev_type,
-        default=VALID_TYPES[0],
-        help="type of LCD (%s)" % ('|'.join(VALID_TYPES))
+        default=BUILTIN_TYPES[0],
+        help="type of LCD, either builtin (%s) or fully qualified class name" % ('|'.join(BUILTIN_TYPES))
     )
     args = parser.parse_args()
 
