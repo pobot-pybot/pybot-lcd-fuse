@@ -199,10 +199,6 @@ class FHBackLight(FHLevelParameter):
 
 class FHKeys(FileHandler):
     """ File handler for the 'keys' file.
-
-    Since the data size is always queried by the OS when a read operation
-    is made, the size evaluation process gets the data from the device and
-    cache them, so that the inherited read process can work as is.
     """
     @property
     def size(self):
@@ -210,6 +206,10 @@ class FHKeys(FileHandler):
         if self.logger:
             self.logger.info("self.data=%s", self.data)
         return len(self.data) + 1
+
+    def read(self):
+        self.data = str(self.terminal.device.get_keypad_state())
+        return super(FHKeys, self).read()
 
 
 class FHLocked(FileHandler):
