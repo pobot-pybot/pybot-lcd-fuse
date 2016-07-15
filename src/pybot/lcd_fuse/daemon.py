@@ -18,8 +18,8 @@ from .lcdfs import LCDFileSystem
 __author__ = 'Eric Pascual'
 
 
-def run_daemon(mount_point, dev_type='LCD03'):
-    daemon_logger = logging.getLogger('daemon')
+def run_daemon(mount_point, dev_type='LCD03', logger=None):
+    daemon_logger = logger or logging.getLogger('daemon')
 
     device = None
     try:
@@ -75,7 +75,7 @@ def run_daemon(mount_point, dev_type='LCD03'):
         cleanup_mount_point(mount_point)
         daemon_logger.info('starting FUSE daemon (mount point: %s)', mount_point)
         FUSE(
-            LCDFileSystem(device, logger=logging.getLogger()),
+            LCDFileSystem(device, logger=daemon_logger.getChild('fuse')),
             mount_point,
             nothreads=True, foreground=False, debug=False,
             allow_other=True
@@ -179,7 +179,7 @@ def main():
     args = parser.parse_args()
 
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    run_daemon(args.mount_point, args.dev_type)
+    run_daemon(args.mount_point, args.dev_type, logger=logger)
 
     logger.info('-' * 10 + ' terminated')
 
