@@ -49,12 +49,12 @@ def run_daemon(mount_point, dev_type='LCD03'):
                 module = importlib.import_module(module_name)
 
             except ImportError:
-                exit('unsupported device type (%s)' % dev_type)
+                exit('unsupported device type (module not found: %s)' % dev_type)
             else:
                 try:
                     device_class = module.getattr(class_name)
                 except AttributeError:
-                    exit('unsupported device type (%s)' % dev_type)
+                    exit('unsupported device type (class not found: %s)' % dev_type)
 
         else:
             exit('unsupported device type (%s)' % dev_type)
