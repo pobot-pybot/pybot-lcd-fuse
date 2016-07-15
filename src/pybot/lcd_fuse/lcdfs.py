@@ -128,7 +128,7 @@ class FileHandler(object):
         :rtype: str
         """
         if self.logger:
-            self.logger.info("read -> %s", self.data)
+            self.logger.debug("read -> %s", self.data)
         return self.data + '\n'
 
 
@@ -203,8 +203,6 @@ class FHKeys(FileHandler):
     @property
     def size(self):
         self.data = str(self.terminal.device.get_keypad_state())
-        if self.logger:
-            self.logger.info("self.data=%s", self.data)
         return len(self.data) + 1
 
     def read(self):
@@ -214,13 +212,14 @@ class FHKeys(FileHandler):
 
 class FHLocked(FileHandler):
     """ File handler for the 'locked' file.
-
-    Works the same way as FHKeys.
     """
     @property
     def size(self):
+        return 2    # data is always 0 or 1 followed by newline
+
+    def read(self):
         self.data = str(int(self.terminal.device.is_locked()))
-        return len(self.data)
+        return super(FHLocked, self).read()
 
 
 class FHLeds(FileHandler):
@@ -431,7 +430,7 @@ class LCDFileSystem(Operations):
         else:
             fd.atime = time.time()
             data = fd.handler.read()
-            self.log_info("read(%s) -> %s", path, data)
+            self.log_debug("read(%s) -> %s", path, data)
             return data
 
     def write(self, path, data, offset, fh):
