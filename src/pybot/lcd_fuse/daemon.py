@@ -18,7 +18,7 @@ from .lcdfs import LCDFileSystem
 __author__ = 'Eric Pascual'
 
 
-def run_daemon(mount_point, dev_type='panel'):
+def run_daemon(mount_point, dev_type='LCD03'):
     daemon_logger = logging.getLogger('daemon')
 
     device = None
@@ -150,8 +150,7 @@ def main():
     BUILTIN_TYPES = ('lcd03', 'lcd05')
 
     def dev_type(s):
-        s = str(s).lower()
-        if s in BUILTIN_TYPES or '.' in s:
+        if '.' in s or s.lower() in BUILTIN_TYPES:
             return s
 
         raise ArgumentTypeError('invalid LCD type')
