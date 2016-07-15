@@ -127,7 +127,8 @@ class FileHandler(object):
         :return: the data "read" from the file
         :rtype: str
         """
-        self.logger.info("read -> %s", self.data)
+        if self.logger:
+            self.logger.info("read -> %s", self.data)
         return self.data
 
 
@@ -206,6 +207,8 @@ class FHKeys(FileHandler):
     @property
     def size(self):
         self.data = str(self.terminal.device.get_keypad_state())
+        if self.logger:
+            self.logger.info("self.data=%s", self.data)
         return len(self.data)
 
 
@@ -288,10 +291,10 @@ class LCDFileSystem(Operations):
         dev_class = terminal.device.__class__
 
         self._content = {
-            'backlight': FSEntryDescriptor(FHBackLight(terminal)),
-            'keys': FSEntryDescriptor(FHKeys(terminal)),
-            'display': FSEntryDescriptor(FHDisplay(terminal)),
-            'info': FSEntryDescriptor(FHInfo(terminal)),
+            'backlight': FSEntryDescriptor(FHBackLight(terminal, self._logger)),
+            'keys': FSEntryDescriptor(FHKeys(terminal, self._logger)),
+            'display': FSEntryDescriptor(FHDisplay(terminal, self._logger)),
+            'info': FSEntryDescriptor(FHInfo(terminal, self._logger)),
         }
 
         def report_entry_creation(name, read_only):
@@ -307,7 +310,7 @@ class LCDFileSystem(Operations):
             ('is_locked', 'locked', FHLocked),
         ]:
             if hasattr(dev_class, attr):
-                handler = handler_class(terminal)
+                handler = handler_class(terminal, self._logger)
                 self._content[fname] = FSEntryDescriptor(handler)
                 report_entry_creation(fname, handler.is_read_only)
 
