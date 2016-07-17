@@ -127,8 +127,6 @@ class FileHandler(object):
         :return: the data "read" from the file
         :rtype: str
         """
-        if self.logger:
-            self.logger.debug("read -> %s", self.data)
         return self.data + '\n'
 
 
@@ -279,10 +277,11 @@ class FHInfo(FileHandler):
         return len(self.data)
 
     def read(self):
+        self.logger.info('FHInfo.read')
         return self.data
 
 
-class LCDFileSystem(Operations):
+class LCDFSOperations(Operations):
     """ The file system implementation
     """
     def __init__(self, terminal, logger=None):
@@ -321,6 +320,7 @@ class LCDFileSystem(Operations):
                 report_entry_creation(fname, handler.is_read_only)
 
         self._dir_entries = ['.', '..'] + self._content.keys()
+        self._fd = 0
 
         self.reset()
 
@@ -410,7 +410,8 @@ class LCDFileSystem(Operations):
                 'st_mode': stat.S_IFREG | (0o444 if fd.handler.is_read_only else 0o666),
                 'st_size': fd.handler.size,
                 'st_mtime': fd.mtime,
-                'st_atime': fd.mtime,
+                # 'st_atime': fd.mtime,
+                'st_blocks': int((fd.handler.size + 511) / 512),
             })
             return fstat
 
@@ -424,11 +425,12 @@ class LCDFileSystem(Operations):
         """ ..see:: :py:class:`fuse.Operations` """
         self.log_debug('open(path=%s, flags=0x%x)', path, flags)
 
-        return 1024 + self._content.keys().index(path[1:])
+        self._fd += 1
+        return self._fd
 
-    def read(self, path, *args):
+    def read(self, path, size, offset, fh):
         """ ..see:: :py:class:`fuse.Operations` """
-        self.log_debug('read(path=%s)', path)
+        self.log_debug('read(path=%s, size=%d)', path)
 
         try:
             fd = self._get_descriptor(path)
@@ -436,6 +438,9 @@ class LCDFileSystem(Operations):
             raise FuseOSError(errno.ENOENT)
         else:
             fd.atime = time.time()
+            if offset >= fd.handler.size:
+                return None
+
             data = fd.handler.read()
             self.log_debug("read(%s) -> %s", path, data)
             return data
@@ -452,7 +457,7 @@ class LCDFileSystem(Operations):
             raise FuseOSError(errno.ENOENT)
         else:
             retval = fd.handler.write(data)
-            fd.atime = fd.mtime = time.time()
+            fd.mtime = time.time()
             return retval
 
     def truncate(self, path, length, fh=None):
@@ -461,3 +466,16 @@ class LCDFileSystem(Operations):
         a "read-only file system" error.
         """
         self.log_debug('truncate(path=%s, length=%d)', path, length)
+        return length
+
+    def utimens(self, path, times=None):
+        now = time.time()
+        atime, mtime = times if times else (now, now)
+
+        try:
+            fd = self._get_descriptor(path)
+        except KeyError:
+            raise FuseOSError(errno.ENOENT)
+        else:
+            fd.atime = atime
+            fd.mtime = mtime

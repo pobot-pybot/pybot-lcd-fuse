@@ -13,7 +13,7 @@ from argparse import ArgumentTypeError
 from fuse import FUSE
 
 from pybot.core import cli
-from .lcdfs import LCDFileSystem
+from .lcdfs import LCDFSOperations
 
 __author__ = 'Eric Pascual'
 
@@ -75,12 +75,12 @@ def run_daemon(mount_point, dev_type='LCD03', logger=None):
         cleanup_mount_point(mount_point)
         daemon_logger.info('starting FUSE daemon (mount point: %s)', mount_point)
         FUSE(
-            LCDFileSystem(device, logger=daemon_logger.getChild('fuse')),
+            LCDFSOperations(device, logger=daemon_logger.getChild('fuse')),
             mount_point,
-            nothreads=True, foreground=False, debug=False, direct_io=True,
+            nothreads=True, foreground=False, debug=False,
+            direct_io=True,
             allow_other=True
         )
-        daemon_logger.info('FUSE daemon stopped')
     except RuntimeError as e:
         sys.exit(1)
     finally:
