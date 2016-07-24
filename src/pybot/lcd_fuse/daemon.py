@@ -18,8 +18,8 @@ from .lcdfs import LCDFSOperations
 __author__ = 'Eric Pascual'
 
 
-def run_daemon(mount_point, dev_type='LCD03', logger=None):
-    daemon_logger = logger or logging.getLogger('daemon')
+def run_daemon(mount_point, dev_type='LCD03'):
+    daemon_logger = logging.getLogger('daemon')
 
     device = None
     try:
@@ -70,21 +70,30 @@ def run_daemon(mount_point, dev_type='LCD03', logger=None):
     def cleanup_mount_point(mp):
         [os.remove(p) for p in glob.glob(os.path.join(mp, '*'))]
 
+    exit_code = 1     # suppose error by default
     try:
         mount_point = os.path.abspath(mount_point)
         cleanup_mount_point(mount_point)
         daemon_logger.info('starting FUSE daemon (mount point: %s)', mount_point)
         FUSE(
-            LCDFSOperations(device, logger=daemon_logger.getChild('fuse')),
+            LCDFSOperations(device),
             mount_point,
             nothreads=True, foreground=False, debug=False,
             direct_io=True,
             allow_other=True
         )
-    except RuntimeError as e:
-        sys.exit(1)
+        daemon_logger.info('returned from FUSE()')
+
+    except Exception as e:
+        daemon_logger.fatal(e)
+        exit_code = 1
+    else:
+        exit_code = 0
     finally:
+        daemon_logger.info("cleaning up mount point")
         cleanup_mount_point(mount_point)
+        daemon_logger.info('exiting with code=%d', exit_code)
+        return exit_code
 
 
 def main():
@@ -122,20 +131,11 @@ def main():
             }
         },
         'root': {
-            'handlers': ['console', 'file']
+            'handlers': ['file']
         },
-        'loggers': {
-            'daemon': {
-                'handlers': ['null'],
-            },
-            'LCDFileSystem': {
-                'handlers': ['null'],
-            }
-        }
     })
 
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
     logger.info('-' * 10 + ' starting')
 
     try:
@@ -179,9 +179,9 @@ def main():
     args = parser.parse_args()
 
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    run_daemon(args.mount_point, args.dev_type, logger=logger)
+    run_daemon(args.mount_point, args.dev_type)
 
     logger.info('-' * 10 + ' terminated')
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

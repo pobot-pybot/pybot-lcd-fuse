@@ -33,8 +33,11 @@ import os
 import stat
 import time
 import grp
+import threading
+import binascii
 
 from fuse import Operations, FuseOSError
+from evdev import UInput, ecodes
 
 from pybot.lcd.ansi import ANSITerm
 
@@ -69,7 +72,7 @@ class FileHandler(object):
 
     def __init__(self, term, logger=None):
         """
-         :param pybot.lcd.ansi.ANSITerm term: the terminal interface by th FS
+         :param pybot.lcd.ansi.ANSITerm term: the terminal interfaced by th FS
         """
         self.terminal = term
         self.logger = logger.getChild(self.__class__.__name__) if logger else None
@@ -284,12 +287,11 @@ class FHInfo(FileHandler):
 class LCDFSOperations(Operations):
     """ The file system implementation
     """
-    def __init__(self, terminal, logger=None):
+    def __init__(self, terminal):
         """
         :param ANSITerm terminal: the ANSI terminal wrapping the device
-        :param int logging_level: the logging level, as defined in the logging standard module
         """
-        self._logger = logger.getChild(self.__class__.__name__) if logger else None
+        self._logger = logging.getLogger(self.__class__.__name__)
         self.log_info("initializing FUSE implementation")
 
         self.terminal = terminal
@@ -322,7 +324,76 @@ class LCDFSOperations(Operations):
         self._dir_entries = ['.', '..'] + self._content.keys()
         self._fd = 0
 
+        self._kp_monitor_thread = None
+        self._kp_monitor_terminate = False
+
         self.reset()
+
+    def _kp_monitor_loop(self):
+        log = logging.getLogger('uinput')
+        log.info('starting keypad monitor')
+
+        dev = self.terminal.device
+        try:
+            keypad_map = dev.get_keypad_map()
+        except AttributeError:
+            keypad_map = [
+                ecodes.KEY_NUMERIC_1,
+                ecodes.KEY_NUMERIC_2,
+                ecodes.KEY_NUMERIC_3,
+                ecodes.KEY_NUMERIC_4,
+                ecodes.KEY_NUMERIC_5,
+                ecodes.KEY_NUMERIC_6,
+                ecodes.KEY_NUMERIC_7,
+                ecodes.KEY_NUMERIC_8,
+                ecodes.KEY_NUMERIC_9,
+                ecodes.KEY_NUMERIC_STAR,
+                ecodes.KEY_NUMERIC_0,
+                ecodes.KEY_NUMERIC_POUND,
+            ]
+
+        keypad_mask = 0
+        for k in reversed(keypad_map):
+            keypad_mask <<= 1
+            if k is not None:
+                keypad_mask |= 1
+
+        cap = {
+            ecodes.EV_KEY: [ecodes.KEY_PREVIOUS, ecodes.KEY_NEXT, ecodes.KEY_ESC, ecodes.KEY_OK]
+        }
+        ui = UInput(cap, name='ctrl-panel')
+        log.info('uinput created')
+
+        last_state = None
+        self._kp_monitor_terminate = False
+
+        while not self._kp_monitor_terminate:
+            state = dev.get_keypad_state() & keypad_mask
+            changes_mask = state if last_state is None else last_state ^ state
+            if changes_mask:
+                log.debug('change detected : state=%d last_state=%d', state, last_state)
+                last_state = state
+                for i, k in enumerate(keypad_map):
+                    if k is not None and (changes_mask & 1):
+                        key_state = state & 1
+                        value = 1 if key_state else 0
+                        ui.write(ecodes.EV_KEY, k, value)
+                        log.info('EV_KEY event sent (code=%s, value=%d)', ecodes.keys[k], value)
+                    state >>= 1
+                    changes_mask >>= 1
+
+                ui.syn()
+                log.debug('sync event sent')
+
+            time.sleep(0.1)
+
+        ui.close()
+        log.info('uinput closed')
+
+    def init(self, path):
+        self.log_info('initializing uinput support')
+        self._kp_monitor_thread = threading.Thread(target=self._kp_monitor_loop)
+        self._kp_monitor_thread.start()
 
     def log_info(self, *args):
         if self._logger and self._logger.isEnabledFor(logging.INFO):
@@ -376,6 +447,12 @@ class LCDFSOperations(Operations):
     def destroy(self, path):
         """ ..see:: :py:class:`fuse.Operations` """
         self.log_debug('destroy(path=%s)', path)
+
+        if self._kp_monitor_thread:
+            self.log_info('stopping keypad monitor')
+            self._kp_monitor_terminate = True
+            self._kp_monitor_thread.join(timeout=1)
+
         self.log_info('destroying file system')
         self.reset()
         self.terminal.device.set_backlight(False)
@@ -410,7 +487,6 @@ class LCDFSOperations(Operations):
                 'st_mode': stat.S_IFREG | (0o444 if fd.handler.is_read_only else 0o666),
                 'st_size': fd.handler.size,
                 'st_mtime': fd.mtime,
-                # 'st_atime': fd.mtime,
                 'st_blocks': int((fd.handler.size + 511) / 512),
             })
             return fstat
@@ -430,8 +506,7 @@ class LCDFSOperations(Operations):
 
     def read(self, path, size, offset, fh):
         """ ..see:: :py:class:`fuse.Operations` """
-        self.log_debug('read(path=%s, size=%d)', path)
-
+        self.log_debug('read(path=%s, size=%d, offset=%d)', path, size, offset)
         try:
             fd = self._get_descriptor(path)
         except KeyError:
@@ -442,7 +517,8 @@ class LCDFSOperations(Operations):
                 return None
 
             data = fd.handler.read()
-            self.log_debug("read(%s) -> %s", path, data)
+            if self._logger.isEnabledFor(logging.DEBUG):
+                self.log_debug("-> %s", binascii.hexlify(data))
             return data
 
     def write(self, path, data, offset, fh):
