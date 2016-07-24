@@ -11,7 +11,7 @@ setup(
     license='',
     author='Eric Pascual',
     author_email='eric@pobot.org',
-    install_requires=['pybot-lcd', 'fusepy'],
+    install_requires=['pybot-lcd', 'fusepy', 'evdev'],
     download_url='https://github.com/Pobot/PyBot',
     description='LCD access through fuse',
     entry_points={
