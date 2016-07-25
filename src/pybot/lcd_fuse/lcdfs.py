@@ -238,7 +238,7 @@ class FHLeds(FileHandler):
     """
     def do_write(self, data):
         data = int(data)
-        self.terminal.device.leds = data
+        self.terminal.device.set_leds_state(data)
         return data
 
 
