@@ -25,6 +25,16 @@ The exposed file system is composed of the following files:
 Which files are created is automatically handled, based on the type of the used device.
 
 The mtime of the files is updated to reflect their real modification time.
+
+In addition, the keypad is monitored so that key presses produce evdev key events,
+just like a regular keyboard. By default, the keys of the standard 4x3 keypad are mapped to
+event codes KEY_NUMERIC_[0..9], KEY_NUMERIC_STAR and KEY_NUMERIC_POUND. This behaviour can
+be customized by the device attached to the terminal associated to the file system. If it
+implements the :py:meth:`get_keypad_map` method, this one will be called to initialized the
+mapping, which is expected to be provided as a 12 items list, each item corresponding to the
+12 keys (starting from top-left one) and containing the key code to be used for the produced
+event, or None if no event is to be produced (or if the key does not exist on the physical
+keypad). Refer to !:py:meht:`LCDFSOperations._kp_monitor_loop` implementation for full detail.
 """
 
 import errno
@@ -330,6 +340,11 @@ class LCDFSOperations(Operations):
         self.reset()
 
     def _kp_monitor_loop(self):
+        """ Keypad monitoring loop, running in a thread and responsible for
+        sending the evdev key events corresponding to key actions.
+
+        Th uinput instance life-cycle is entirely managed in this method.
+        """
         log = logging.getLogger('uinput')
         log.info('starting keypad monitor')
 
