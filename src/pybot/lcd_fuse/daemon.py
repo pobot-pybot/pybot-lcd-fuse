@@ -13,13 +13,14 @@ from argparse import ArgumentTypeError
 from fuse import FUSE
 
 from pybot.core import cli
+from pybot.core import log
 from .lcdfs import LCDFSOperations
 
 __author__ = 'Eric Pascual'
 
 
 def run_daemon(mount_point, dev_type='LCD03'):
-    daemon_logger = logging.getLogger('daemon')
+    daemon_logger = log.getLogger('daemon')
 
     device = None
     try:
@@ -103,39 +104,15 @@ def main():
     """
     log_dir = "/var/log" if os.geteuid() == 0 else os.path.expanduser('~')
 
-    logging.config.dictConfig({
-        'version': 1,
-        'disable_existing_loggers': True,
-        'formatters': {
-            'verbose': {
-                'format': '%(asctime)s [%(levelname).1s] %(name)s > %(message)s'
-            },
-            'simple': {
-                'format': '%(levelname)s %(message)s'
-            },
-        },
+    logging.config.dictConfig(log.get_logging_configuration({
         'handlers': {
-            'console': {
-                'class': 'logging.StreamHandler',
-                'formatter': 'simple',
-            },
             'file': {
-                'class': 'logging.handlers.RotatingFileHandler',
-                'formatter': 'verbose',
                 'filename': os.path.join(log_dir, 'lcdfs.log'),
-                'maxBytes': 100 * 1024,
-                'backupCount': 3,
-            },
-            'null': {
-                'class': 'logging.NullHandler'
             }
-        },
-        'root': {
-            'handlers': ['file']
-        },
-    })
+        }
+    }))
 
-    logger = logging.getLogger()
+    logger = log.getLogger()
     logger.info('-' * 10 + ' starting')
 
     try:
