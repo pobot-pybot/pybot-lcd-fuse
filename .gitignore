@@ -3,3 +3,4 @@ build/
 dist/
 *.egg-info
 fabfile.pyc
+.fab_tasks~

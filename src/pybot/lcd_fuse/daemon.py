@@ -113,7 +113,8 @@ def main():
     }))
 
     logger = log.getLogger()
-    logger.info('-' * 10 + ' starting')
+    logger.info('-' * 40)
+    logger.info('Starting')
 
     try:
         import pkg_resources
@@ -122,7 +123,8 @@ def main():
     else:
         PKG_NAME = 'pybot-lcd-fuse'
         version = pkg_resources.require(PKG_NAME)[0].version
-        logger.info('%s version : %s', PKG_NAME, version)
+        logger.info('Version : %s', version)
+    logger.info('-' * 40)
 
     BUILTIN_TYPES = ('lcd03', 'lcd05')
 
