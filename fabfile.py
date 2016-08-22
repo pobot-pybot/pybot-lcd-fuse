@@ -1,5 +1,4 @@
-from robfabric import *
-from fabric.api import env
+from pybot.fabtasks import *
 from fabric.state import output
 
 env.hosts = ['rpi3']
