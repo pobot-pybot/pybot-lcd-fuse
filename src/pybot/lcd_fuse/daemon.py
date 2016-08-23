@@ -160,7 +160,7 @@ def main():
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
     run_daemon(args.mount_point, args.dev_type)
 
-    logger.info('-' * 10 + ' terminated')
+    logger.info(' terminated '.center(40, '='))
 
 if __name__ == '__main__':
     sys.exit(main())
