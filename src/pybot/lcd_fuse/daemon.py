@@ -22,7 +22,6 @@ __author__ = 'Eric Pascual'
 def run_daemon(mount_point, dev_type='LCD03'):
     daemon_logger = log.getLogger('daemon')
 
-    device = None
     try:
         from pybot.raspi import i2c_bus
 
@@ -32,7 +31,6 @@ def run_daemon(mount_point, dev_type='LCD03'):
         daemon_logger.warn('not running on RasPi => using dummy device')
 
     else:
-        device_class = None
         if dev_type == 'lcd03':
             from pybot.lcd.lcd_i2c import LCD03
             device_class = LCD03
@@ -50,15 +48,15 @@ def run_daemon(mount_point, dev_type='LCD03'):
                 module = importlib.import_module(module_name)
 
             except ImportError:
-                exit('unsupported device type (module not found: %s)' % module_name)
+                raise DaemonError('unsupported device type (module not found: %s)' % module_name)
             else:
                 try:
                     device_class = getattr(module, class_name)
                 except AttributeError:
-                    exit('unsupported device type (class not found: %s)' % dev_type)
+                    raise DaemonError('unsupported device type (class not found: %s)' % dev_type)
 
         else:
-            exit('unsupported device type (%s)' % dev_type)
+            raise DaemonError('unsupported device type (%s)' % dev_type)
 
         if device_class:
             from pybot.lcd.ansi import ANSITerm
@@ -66,7 +64,7 @@ def run_daemon(mount_point, dev_type='LCD03'):
             daemon_logger.info('terminal device type : %s', device_class.__name__)
             device = ANSITerm(device_class(i2c_bus))
         else:
-            exit('cannot determine device type')
+            raise DaemonError('cannot determine device type')
 
     def cleanup_mount_point(mp):
         [os.remove(p) for p in glob.glob(os.path.join(mp, '*'))]
@@ -158,9 +156,25 @@ def main():
     args = parser.parse_args()
 
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    run_daemon(args.mount_point, args.dev_type)
 
-    logger.info(' terminated '.center(40, '='))
+    def log_error_banner(error, unexpected=False):
+        title = 'unexpected error' if unexpected else 'abnormal termination '
+        logger.fatal((' ' + title + ' ').center(40, '!'))
+        logger.fatal(error)
+        logger.fatal('!' * 40)
+
+    try:
+        run_daemon(args.mount_point, args.dev_type)
+    except DaemonError as e:
+        log_error_banner(e)
+    except Exception as e:
+        log_error_banner(e, unexpected=True)
+    else:
+        logger.info(' terminated normally '.center(40, '='))
+
+
+class DaemonError(Exception):
+    pass
 
 if __name__ == '__main__':
     sys.exit(main())
