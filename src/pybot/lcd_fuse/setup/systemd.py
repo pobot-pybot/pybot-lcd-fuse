@@ -19,8 +19,8 @@ def install_service():
             os.mkdir(MOUNT_POINT, 0o755)
             os.chown(MOUNT_POINT, 0, grp.getgrnam(GROUP_NAME).gr_gid)
 
-    pbsystemd.helpers.install_service(SERVICE_NAME, __name__, before_start=before_start)
+    pbsystemd.helpers.install_unit(SERVICE_NAME, __name__, before_start=before_start)
 
 
 def remove_service():
-    pbsystemd.helpers.remove_service(SERVICE_NAME, __name__)
+    pbsystemd.helpers.remove_unit(SERVICE_NAME, __name__)
