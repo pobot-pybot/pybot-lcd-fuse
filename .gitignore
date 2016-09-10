@@ -2,5 +2,5 @@ RELEASE-VERSION
 build/
 dist/
 *.egg-info
-fabfile.pyc
+*.pyc
 .fab_tasks~
