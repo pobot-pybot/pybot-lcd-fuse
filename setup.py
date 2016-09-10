@@ -27,6 +27,6 @@ setup(
         ]
     },
     package_data={
-        'pybot.lcd_fuse': ['pkg_data/*']
+        'pybot.lcd_fuse.setup': ['pkg_data/*']
     }
 )
