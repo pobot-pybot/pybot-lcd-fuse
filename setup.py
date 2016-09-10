@@ -20,7 +20,6 @@ setup(
     entry_points={
         'console_scripts': [
             'lcdfs = pybot.lcd_fuse.daemon:main',
-            'lcdfs-initd = pybot.lcd_fuse.install:install_initd',
             # optionals
             "lcdfs-systemd-install = pybot.lcd_fuse.setup.systemd:install_service [systemd]",
             "lcdfs-systemd-remove = pybot.lcd_fuse.setup.systemd:remove_service [systemd]",
