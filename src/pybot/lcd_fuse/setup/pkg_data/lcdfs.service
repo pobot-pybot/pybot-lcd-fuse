@@ -1,6 +1,7 @@
 [Unit]
 Description=LCD FUSE file system
 After=syslog.target
+PartOf=youpi2.target
 
 [Service]
 Type=forking
@@ -9,5 +10,5 @@ ExecStart=/home/pi/.local/bin/lcdfs -t pybot.youpi2.ctlpanel.devices.direct.Cont
 ExecStop=/bin/fusermount -u $LCDFS_MOUNT_POINT
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=youpi2.target
 
