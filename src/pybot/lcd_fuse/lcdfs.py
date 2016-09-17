@@ -309,6 +309,7 @@ class LCDFSOperations(Operations):
 
         self.terminal = terminal
         dev_class = terminal.device.__class__
+        self.log_info("terminal device class : " + dev_class.__name__)
 
         self._content = {
             'backlight': FSEntryDescriptor(FHBackLight(terminal, logger=self._logger)),
@@ -410,11 +411,26 @@ class LCDFSOperations(Operations):
 
     def init(self, path):
         if not self.no_splash:
-            import socket
+            self.log_info("displaying splash screen")
+
+            def write_at(s, line):
+                self.terminal.process_sequence("\x1b[%d;%dH%s" % (line, 1,  s))
+
+            import socket, subprocess
+
             host_name = socket.gethostname()
-            ip = socket.gethostbyname(host_name)
-            self.terminal.write_at("host: " + host_name, line=1, col=1)
-            self.terminal.write_at("ip: " + ip, line=2, col=1)
+            write_at("host:" + host_name, 1)
+
+            out = subprocess.check_output("ip -4 -o addr".split(), bufsize=-1)
+            y_pos = 2
+            for line in out.strip().split('\n'):
+                _, ifname, tail = line.strip().split(' ', 2)
+                if ifname.startswith('eth') or ifname.startswith('wlan'):
+                    _, addr, _ = tail.strip().split(' ', 2)
+                    write_at("%s:%s" % (ifname.strip(), addr.split('/')[0]), line=y_pos)
+                    y_pos += 1
+                    if y_pos > self.terminal.device.height:
+                        break
 
         self.log_info('initializing uinput support')
         self._kp_monitor_thread = threading.Thread(target=self._kp_monitor_loop)
