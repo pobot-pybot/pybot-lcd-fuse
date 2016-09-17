@@ -19,7 +19,7 @@ from .lcdfs import LCDFSOperations
 __author__ = 'Eric Pascual'
 
 
-def run_daemon(mount_point, dev_type='LCD03'):
+def run_daemon(mount_point, dev_type='LCD03', no_splash=False):
     daemon_logger = log.getLogger('daemon')
 
     try:
@@ -75,7 +75,7 @@ def run_daemon(mount_point, dev_type='LCD03'):
         cleanup_mount_point(mount_point)
         daemon_logger.info('starting FUSE daemon (mount point: %s)', mount_point)
         FUSE(
-            LCDFSOperations(device),
+            LCDFSOperations(device, no_splash),
             mount_point,
             nothreads=True, foreground=False, debug=False,
             direct_io=True,
@@ -153,6 +153,12 @@ def main():
         default=BUILTIN_TYPES[0],
         help="type of LCD, either builtin (%s) or fully qualified class name" % ('|'.join(BUILTIN_TYPES))
     )
+    parser.add_argument(
+        '--no-splash',
+        dest='no_splash',
+        action='store_true',
+        help="do not display the default splash text (host name, IP,...)"
+    )
     args = parser.parse_args()
 
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
@@ -164,7 +170,7 @@ def main():
         logger.fatal('!' * 40)
 
     try:
-        run_daemon(args.mount_point, args.dev_type)
+        run_daemon(args.mount_point, args.dev_type, args.no_splash)
     except DaemonError as e:
         log_error_banner(e)
     except Exception as e:
