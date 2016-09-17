@@ -297,10 +297,13 @@ class FHInfo(FileHandler):
 class LCDFSOperations(Operations):
     """ The file system implementation
     """
-    def __init__(self, terminal):
+    def __init__(self, terminal, no_splash=False):
         """
         :param ANSITerm terminal: the ANSI terminal wrapping the device
+        :param bool no_splash: if True, do not display the splash screen after init
         """
+        self.no_splash = no_splash
+
         self._logger = logging.getLogger(self.__class__.__name__)
         self.log_info("initializing FUSE implementation")
 
@@ -406,24 +409,31 @@ class LCDFSOperations(Operations):
         log.info('uinput closed')
 
     def init(self, path):
+        if not self.no_splash:
+            import socket
+            host_name = socket.gethostname()
+            ip = socket.gethostbyname(host_name)
+            self.terminal.write_at("host: " + host_name, line=1, col=1)
+            self.terminal.write_at("ip: " + ip, line=2, col=1)
+
         self.log_info('initializing uinput support')
         self._kp_monitor_thread = threading.Thread(target=self._kp_monitor_loop)
         self._kp_monitor_thread.start()
 
     def log_info(self, *args):
-        if self._logger and self._logger.isEnabledFor(logging.INFO):
+        if self._logger:
             self._logger.info(*args)
 
     def log_warning(self, *args):
-        if self._logger and self._logger.isEnabledFor(logging.WARNING):
+        if self._logger:
             self._logger.warning(*args)
 
     def log_error(self, *args):
-        if self._logger and self._logger.isEnabledFor(logging.ERROR):
+        if self._logger:
             self._logger.error(*args)
 
     def log_debug(self, *args):
-        if self._logger and self._logger.isEnabledFor(logging.DEBUG):
+        if self._logger:
             self._logger.debug(*args)
 
     DEFAULT_CONTENTS = [
